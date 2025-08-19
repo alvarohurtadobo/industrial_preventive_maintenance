@@ -35,9 +35,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 warnings.filterwarnings('ignore')
 
 # Configuración de directorios y archivos
-RESULTS_DIR = "resultados"
+RESULTS_DIR = "results"
 EXCEL_FILE = os.path.join(RESULTS_DIR, 'model_evaluation.xlsx')
-PDF_REPORT = os.path.join(RESULTS_DIR, "informe_tecnico.pdf")
+PDF_REPORT = os.path.join(RESULTS_DIR, "technical_report.pdf")
 
 def setup_directories():
     """Crear directorios necesarios."""
@@ -721,7 +721,7 @@ def create_pdf_report(data, model_metrics, feature_names, best_models, anomaly_r
         logging.error(f"Error al crear el informe PDF: {e}")
 
 def main():
-    """Función principal para ejecutar el flujo completo."""
+    """Main function for overall flow"""
     setup_directories()
     data = generate_simulated_temporal_data()
     data = handle_data_types(data)  # Manejar tipos de datos antes del EDA
