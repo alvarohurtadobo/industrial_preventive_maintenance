@@ -66,9 +66,7 @@ def connect_mqtt():
     client.connect(broker, port)
     client.subscribe(topic)
     client.on_message = on_message
+    client.loop_forever()
     return client
 
-
 connect_mqtt()
-
-client.loop_forever()
