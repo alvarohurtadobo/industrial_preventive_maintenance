@@ -3,3 +3,4 @@ svglib
 ydata-profiling
 imblearn
 openpyxl
+paho-mqtt
