@@ -4,3 +4,4 @@ ydata-profiling
 imblearn
 openpyxl
 paho-mqtt
+kedro
