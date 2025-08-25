@@ -35,12 +35,19 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 warnings.filterwarnings('ignore')
 
 # Configuración de directorios y archivos
-RESULTS_DIR = "results"
+INPUTS_DIR = "inputs"
+RESULTS_DIR = "outputs"
 EXCEL_FILE = os.path.join(RESULTS_DIR, 'model_evaluation.xlsx')
 PDF_REPORT = os.path.join(RESULTS_DIR, "technical_report.pdf")
 
 def setup_directories():
     """Crear directorios necesarios."""
+    if not os.path.exists(INPUTS_DIR):
+        os.makedirs(INPUTS_DIR)
+        logging.info(f"Directorio '{INPUTS_DIR}' creado.")
+    else:
+        logging.info(f"Directorio '{INPUTS_DIR}' ya existe.")
+
     if not os.path.exists(RESULTS_DIR):
         os.makedirs(RESULTS_DIR)
         logging.info(f"Directorio '{RESULTS_DIR}' creado.")
@@ -149,6 +156,11 @@ def generate_simulated_temporal_data():
     # data = pd.read_csv('data/data.csv')
     data = pd.DataFrame(data_records)
 
+    print(f"Data shape: {data.shape}")
+    print(f"Data info: {data.info()}")
+    print(f"Data describe: {data.describe()}")
+    # print(f"Data median: {data.median()}")
+
     # Manejar valores NaN (rellenar con la media de cada columna numérica)
     numeric_cols = data.select_dtypes(include=[np.number]).columns
     data[numeric_cols] = data[numeric_cols].fillna(data[numeric_cols].mean())
@@ -158,6 +170,9 @@ def generate_simulated_temporal_data():
 
     logging.info("Datos temporales simulados generados correctamente.")
     return data
+
+def exportToCSV(data):
+    data.to_csv(os.path.join(INPUTS_DIR, 'emulated_data.csv'), index=False)
 
 def handle_data_types(data):
     """
@@ -724,6 +739,7 @@ def main():
     """Main function for overall flow"""
     setup_directories()
     data = generate_simulated_temporal_data()
+    exportToCSV(data)
     data = handle_data_types(data)  # Manejar tipos de datos antes del EDA
 
     # Verificación adicional
