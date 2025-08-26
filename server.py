@@ -2,7 +2,6 @@ import json
 import random
 from paho.mqtt import client as mqtt_client
 
-
 def connect_mqtt():
     client_id = f'python-mqtt-{random.randint(0, 1000)}'
     broker = 'broker.emqx.io'

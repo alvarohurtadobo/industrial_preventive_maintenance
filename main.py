@@ -726,22 +726,22 @@ def main():
     data = generate_simulated_temporal_data()
     data = handle_data_types(data)  # Manejar tipos de datos antes del EDA
 
-    # Verificación adicional
-    categorical_cols_remaining = data.select_dtypes(include=['object', 'category']).columns.tolist()
-    if categorical_cols_remaining:
-        raise ValueError(f"Las siguientes columnas aún son categóricas y no han sido codificadas: {categorical_cols_remaining}")
-    else:
-        logging.info("Todas las columnas categóricas han sido codificadas correctamente.")
+    # # Verificación adicional
+    # categorical_cols_remaining = data.select_dtypes(include=['object', 'category']).columns.tolist()
+    # if categorical_cols_remaining:
+    #     raise ValueError(f"Las siguientes columnas aún son categóricas y no han sido codificadas: {categorical_cols_remaining}")
+    # else:
+    #     logging.info("Todas las columnas categóricas han sido codificadas correctamente.")
 
-    perform_eda(data)
-    X_train, X_test, y_train, y_test, feature_names = preprocess_data(data)
-    best_models = train_classification_models(X_train, y_train)
-    model_metrics = evaluate_classification_models(best_models, X_test, y_test)
-    plot_classification_curves(model_metrics, y_test)
-    plot_feature_importance(best_models, feature_names)
-    anomaly_results = detect_anomalies(data)
-    create_pdf_report(data, model_metrics, feature_names, best_models, anomaly_results)
-    logging.info("Proceso completado exitosamente. Todos los resultados y el informe se han guardado en la carpeta 'resultados'.")
+    # perform_eda(data)
+    # X_train, X_test, y_train, y_test, feature_names = preprocess_data(data)
+    # best_models = train_classification_models(X_train, y_train)
+    # model_metrics = evaluate_classification_models(best_models, X_test, y_test)
+    # plot_classification_curves(model_metrics, y_test)
+    # plot_feature_importance(best_models, feature_names)
+    # anomaly_results = detect_anomalies(data)
+    # create_pdf_report(data, model_metrics, feature_names, best_models, anomaly_results)
+    # logging.info("Proceso completado exitosamente. Todos los resultados y el informe se han guardado en la carpeta 'resultados'.")
 
 if __name__ == "__main__":
     main()
