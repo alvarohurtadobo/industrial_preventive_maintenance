@@ -64,14 +64,14 @@ def setup_directories():
 def generate_simulated_temporal_data():
     """Generar datos simulados temporales para múltiples equipos."""
     np.random.seed(42)
-    n_equipment = 100  # Número de equipos
-    n_time_steps = 40  # Número de tiempos por equipo
+    n_equipment = 100  # Number of devices
+    n_time_steps = 40  # Nunber of samples per device
 
-    # Crear listas para almacenar los datos
+    # Create an array for the records
     data_records = []
 
     for equipment in range(1, n_equipment + 1):
-        # Asignar un tipo de proceso fijo por equipo
+        # Assign time, for simplicity 1 second period
         process_type = np.random.choice(['Vibrations', 'Oil Analysis', 'Hours Operated'])
         for t in range(1, n_time_steps + 1):
             record = {
@@ -80,7 +80,7 @@ def generate_simulated_temporal_data():
                 'process_type': process_type
             }
 
-            # Simulación de características con tendencias y ruido
+            # Simulate according to the characteristics
             if process_type == 'Vibrations':
                 vib = np.sin(t / 5) + np.random.normal(0, 0.5)
                 temp = 20 + 2 * vib + np.random.normal(0, 0.5)
@@ -97,7 +97,7 @@ def generate_simulated_temporal_data():
                     'load': np.nan
                 })
             elif process_type == 'Oil Analysis':
-                oil_q = np.random.uniform(0, 100) + t * 0.1  # Incremento leve con el tiempo
+                oil_q = np.random.uniform(0, 100) + t * 0.1  # Small increment with time
                 cont_level = 50 + 0.5 * oil_q + np.random.normal(0, 5)
                 acid = 10 + 0.3 * (oil_q ** 1.5) + np.random.normal(0, 2)
                 record.update({
@@ -112,8 +112,8 @@ def generate_simulated_temporal_data():
                     'load': np.nan
                 })
             elif process_type == 'Hours Operated':
-                hours_op = np.random.exponential(scale=50) + t * 0.5  # Acumulativo con el tiempo
-                maint_hist = np.random.poisson(lam=2)  # Historial de mantenimiento
+                hours_op = np.random.exponential(scale=50) + t * 0.5  # Proportional to time
+                maint_hist = np.random.poisson(lam=2)  # Maintenance history
                 ld = 100 + 0.1 * t + np.random.normal(0, 10)
                 record.update({
                     'vibration': np.nan,
@@ -127,7 +127,7 @@ def generate_simulated_temporal_data():
                     'load': ld
                 })
 
-            # Simulación de fallos
+            # Failure emulation
             if process_type == 'Vibrations':
                 fail = int((0.3 * vib + 0.2 * temp - 0.1 * pres + np.random.normal(0, 0.5)) > 1)
             elif process_type == 'Oil Analysis':
@@ -136,22 +136,22 @@ def generate_simulated_temporal_data():
                 fail = int((0.05 * hours_op + 0.1 * maint_hist - 0.02 * ld + np.random.normal(0, 1)) > 3)
             record['failure'] = fail
 
-            # Introducción de anomalías aleatorias
-            if np.random.rand() < 0.02:  # 2% de probabilidad de anomalía
+            # Introduction of random anomalies
+            if np.random.rand() < 0.02:  # 2% anomaly likelihood
                 record['anomaly'] = 1
-                # Alterar algunas variables
+                # Alter some variables
                 if process_type == 'Vibrations':
-                    record['vibration'] += np.random.normal(10, 5)  # Anomalía en vibración
+                    record['vibration'] += np.random.normal(10, 5)  # Vibration
                 elif process_type == 'Oil Analysis':
-                    record['oil_quality'] += np.random.uniform(50, 100)  # Anomalía en calidad de aceite
+                    record['oil_quality'] += np.random.uniform(50, 100)  # Oil quality
                 elif process_type == 'Hours Operated':
-                    record['load'] += np.random.uniform(50, 100)  # Anomalía en carga
+                    record['load'] += np.random.uniform(50, 100)  # Load
             else:
                 record['anomaly'] = 0
 
             data_records.append(record)
 
-    # Crear DataFrame
+    # Create DataFrame
 
     # data = pd.read_csv('data/data.csv')
     data = pd.DataFrame(data_records)
@@ -161,14 +161,14 @@ def generate_simulated_temporal_data():
     print(f"Data describe: {data.describe()}")
     # print(f"Data median: {data.median()}")
 
-    # Manejar valores NaN (rellenar con la media de cada columna numérica)
+    # Handle Nan variables
     numeric_cols = data.select_dtypes(include=[np.number]).columns
     data[numeric_cols] = data[numeric_cols].fillna(data[numeric_cols].mean())
 
-    # Asegurarse de que 'anomaly' es de tipo entero
+    # Make sure 'anomaly' is integer
     data['anomaly'] = data['anomaly'].astype(int)
 
-    logging.info("Datos temporales simulados generados correctamente.")
+    logging.info("Temporal data emulated correctly.")
     return data
 
 def exportToCSV(data):
