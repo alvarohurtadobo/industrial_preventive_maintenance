@@ -176,9 +176,9 @@ def exportToCSV(data):
 
 def handle_data_types(data):
     """
-    Asegura que todas las columnas tengan los tipos de datos correctos.
-    - Convierte variables categóricas en numéricas mediante codificación.
-    - Asegura que las variables numéricas sean del tipo adecuado.
+    Makes sure all data types are correct
+    - Converts categoric variables into numeric acording to codification.
+    - Makes sure numeric variables are of the correct type.
     """
     categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
 
@@ -198,65 +198,65 @@ def handle_data_types(data):
             encoded_cols = encoder.get_feature_names_out(categorical_cols)
             encoded_df = pd.DataFrame(encoded_data, columns=encoded_cols, index=data.index)
             data = pd.concat([data.drop(categorical_cols, axis=1), encoded_df], axis=1)
-            logging.info("Variables categóricas codificadas correctamente.")
+            logging.info("Categoric variables coded correctly.")
         except Exception as e:
-            logging.error(f"Error al codificar variables categóricas: {e}")
+            logging.error(f"Error codifyng variables: {e}")
             raise
     else:
-        logging.info("No se encontraron columnas categóricas para codificar.")
+        logging.info("Not found categoric variable columns.")
 
     # Asegurar que todas las columnas numéricas sean de tipo float
     numeric_cols = data.select_dtypes(include=[np.number]).columns
     data[numeric_cols] = data[numeric_cols].astype(float)
-    logging.info("Tipos de datos numéricos asegurados como float.")
+    logging.info("Ensured numeric data type as float.")
 
     # Verificación adicional
     remaining_categorical = data.select_dtypes(include=['object', 'category']).columns.tolist()
     if remaining_categorical:
-        raise ValueError(f"Las siguientes columnas aún son categóricas y no han sido codificadas: {remaining_categorical}")
+        raise ValueError(f"Following columns have not been coded yet and are still categoric: {remaining_categorical}")
     else:
-        logging.info("Todas las columnas categóricas han sido codificadas.")
+        logging.info("All columns have been coded")
 
     return data
 
 def perform_eda(data):
-    """Realizar Análisis Exploratorio de Datos (EDA)."""
+    """Perform exploratory analysis of the data (EDA)."""
     try:
-        profile = ProfileReport(data, title='Análisis Exploratorio de Datos', explorative=True)
-        eda_file = os.path.join(RESULTS_DIR, "EDA_del_dataset.html")
+        profile = ProfileReport(data, title='Exploratory analysis of the data', explorative=True)
+        eda_file = os.path.join(RESULTS_DIR, "dataset_EDA.html")
         profile.to_file(eda_file)
-        logging.info(f"Reporte de EDA generado en '{eda_file}'.")
+        logging.info(f"EDA report saved to '{eda_file}'.")
     except Exception as e:
-        logging.error(f"Error al generar el reporte de EDA: {e}")
+        logging.error(f"Error generating EDA report: {e}")
 
-    # Distribución de fallos y no fallos
+    # Distribution of failures and not failures
     plt.figure(figsize=(8, 6))
     sns.countplot(x='failure', data=data, palette='coolwarm')
-    plt.title('Distribución de Fallos vs No Fallos')
-    plt.xlabel('Fallo')
-    plt.ylabel('Conteo')
+    plt.title('Failure/Not Failure distribution')
+    plt.xlabel('Failure')
+    plt.ylabel('Count')
     plt.savefig(os.path.join(RESULTS_DIR, 'failure_distribution.png'), dpi=300)
     plt.close()
-    logging.info("Gráfico 'failure_distribution.png' guardado.")
+    logging.info("Plot 'failure_distribution.png' saved.")
 
-    # Matriz de correlación
+    # Correlation matrix
     plt.figure(figsize=(14, 10))
     corr = data.corr()
     sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', linewidths=0.5)
     plt.title('Matriz de Correlación de Datos Simulados')
     plt.savefig(os.path.join(RESULTS_DIR, 'correlation_matrix.png'), dpi=300)
     plt.close()
-    logging.info("Gráfico 'correlation_matrix.png' guardado.")
+    logging.info("Plot 'correlation_matrix.png' saved.")
 
-    # Histogramas de cada variable
+    # Hystogram per variable
     numeric_columns = data.select_dtypes(include=[np.number]).columns
     data[numeric_columns].hist(bins=30, figsize=(20, 15), color='steelblue', edgecolor='black')
-    plt.suptitle('Histogramas de Variables', fontsize=16)
+    plt.suptitle('Histograms of Variables', fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     histograms_path = os.path.join(RESULTS_DIR, 'histograms.png')
     plt.savefig(histograms_path, dpi=300)
     plt.close()
-    logging.info(f"Gráfico 'histograms.png' guardado.")
+    logging.info(f"Plot 'histograms.png' saved.")
 
     # Boxplots para detectar outliers
     numeric_columns = data.select_dtypes(include=[np.number]).columns
@@ -274,9 +274,9 @@ def perform_eda(data):
 
     for idx, column in enumerate(feature_columns):
         sns.boxplot(y=data[column], ax=axes[idx], color='lightgreen')
-        axes[idx].set_title(f'Boxplot de {column}')
+        axes[idx].set_title(f'Boxplot of {column}')
 
-    # Eliminar subplots vacíos si los hay
+    # Delete subplots if any
     for ax in axes[num_features:]:
         fig.delaxes(ax)
 
@@ -284,15 +284,15 @@ def perform_eda(data):
     boxplots_path = os.path.join(RESULTS_DIR, 'boxplots.png')
     plt.savefig(boxplots_path, dpi=300)
     plt.close()
-    logging.info(f"Gráfico 'boxplots.png' guardado.")
+    logging.info(f"Plot 'boxplots.png' saved.")
 
-    # Pairplot para ver relaciones entre variables
+    # Pairplot to validate relations between variables
     sns.pairplot(data.drop(['equipment_id', 'time_step'], axis=1, errors='ignore'), hue='failure', palette='coolwarm', diag_kind='kde')
-    plt.suptitle('Pairplot de Variables', y=1.02)
+    plt.suptitle('Pairplot of Variables', y=1.02)
     pairplot_path = os.path.join(RESULTS_DIR, 'pairplot.png')
     plt.savefig(pairplot_path, dpi=300)
     plt.close()
-    logging.info(f"Gráfico 'pairplot.png' guardado.")
+    logging.info(f"Plot 'pairplot.png' saved.")
 
 def preprocess_data(data):
     """Preprocesar los datos: escalado, balanceo y división en conjuntos de entrenamiento y prueba."""
