@@ -295,26 +295,26 @@ def perform_eda(data):
     logging.info(f"Plot 'pairplot.png' saved.")
 
 def preprocess_data(data):
-    """Preprocesar los datos: escalado, balanceo y división en conjuntos de entrenamiento y prueba."""
-    # Variables independientes (X) y dependiente (y)
+    """Preprocess data: scaling, balancing and splif of testing and trainging data."""
+    # Independent variables (X) and dependent variables (y)
     X = data.drop(['failure', 'equipment_id', 'time_step', 'anomaly'], axis=1, errors='ignore')
     y = data['failure'].astype(int)  # Asegurar que 'failure' es de tipo entero
 
-    # Escalado de características
+    # Scaling characteristics
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    logging.info("Características escaladas correctamente.")
+    logging.info("Successfully scaled characteristics escaladas correctamente.")
 
-    # Manejo de desbalance de clases con SMOTE
+    # Handling unbalance of classes using SMOTE
     smote = SMOTE(random_state=42)
     X_resampled, y_resampled = smote.fit_resample(X_scaled, y)
-    logging.info("Datos balanceados usando SMOTE correctamente.")
+    logging.info("Successfully balanced data used for SMOTE.")
 
-    # Dividir en conjunto de entrenamiento y prueba
+    # Split training and testing data
     X_train, X_test, y_train, y_test = train_test_split(
         X_resampled, y_resampled, test_size=0.3, random_state=42, stratify=y_resampled
     )
-    logging.info("Datos divididos en entrenamiento y prueba correctamente.")
+    logging.info("Successful division of data for training and testing.")
     return X_train, X_test, y_train, y_test, X.columns
 
 def train_classification_models(X_train, y_train):
@@ -354,15 +354,15 @@ def train_classification_models(X_train, y_train):
 
     best_models = {}
     for model_name, mp in models.items():
-        logging.info(f"Entrenando y ajustando hiperparámetros para {model_name}...")
+        logging.info(f"Training and adjunsting parameters for model: {model_name}...")
         try:
             grid = GridSearchCV(mp['model'], mp['params'], cv=5, scoring='roc_auc', n_jobs=-1)
             grid.fit(X_train, y_train)
             best_models[model_name] = grid.best_estimator_
-            logging.info(f"Mejores parámetros para {model_name}: {grid.best_params_}")
-            logging.info(f"Mejor ROC AUC en validación para {model_name}: {grid.best_score_:.4f}\n")
+            logging.info(f"Best parameters for {model_name}: {grid.best_params_}")
+            logging.info(f"Best ROC AUC validation for {model_name}: {grid.best_score_:.4f}\n")
         except Exception as e:
-            logging.error(f"Error al entrenar {model_name}: {e}")
+            logging.error(f"Error training {model_name}: {e}")
     return best_models
 
 def evaluate_classification_models(best_models, X_test, y_test):
