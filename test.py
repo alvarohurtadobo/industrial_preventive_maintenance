@@ -311,14 +311,14 @@ def preprocess_data(data):
     logging.info("Successfully balanced data used for SMOTE.")
 
     # Split training and testing data
-    X_train, X_test, y_train, y_test = train_test_split(
+    x_train, x_test, y_train, y_test = train_test_split(
         X_resampled, y_resampled, test_size=0.3, random_state=42, stratify=y_resampled
     )
     logging.info("Successful division of data for training and testing.")
-    return X_train, X_test, y_train, y_test, X.columns
+    return x_train, x_test, y_train, y_test, X.columns
 
-def train_classification_models(X_train, y_train):
-    """Entrenar modelos de Machine Learning utilizando GridSearchCV."""
+def train_classification_models(x_train, y_train):
+    """Train ML models using GridSearchCV"""
     models = {
         'RandomForest': {
             'model': RandomForestClassifier(random_state=42),
@@ -357,7 +357,7 @@ def train_classification_models(X_train, y_train):
         logging.info(f"Training and adjunsting parameters for model: {model_name}...")
         try:
             grid = GridSearchCV(mp['model'], mp['params'], cv=5, scoring='roc_auc', n_jobs=-1)
-            grid.fit(X_train, y_train)
+            grid.fit(x_train, y_train)
             best_models[model_name] = grid.best_estimator_
             logging.info(f"Best parameters for {model_name}: {grid.best_params_}")
             logging.info(f"Best ROC AUC validation for {model_name}: {grid.best_score_:.4f}\n")
@@ -365,12 +365,12 @@ def train_classification_models(X_train, y_train):
             logging.error(f"Error training {model_name}: {e}")
     return best_models
 
-def evaluate_classification_models(best_models, X_test, y_test):
+def evaluate_classification_models(best_models, x_test, y_test):
     """Evaluar los modelos entrenados y guardar los resultados."""
-    def save_results(model_name, model, X_test, y_test):
+    def save_results(model_name, model, x_test, y_test):
         try:
-            y_pred = model.predict(X_test)
-            y_pred_proba = model.predict_proba(X_test)[:, 1]
+            y_pred = model.predict(x_test)
+            y_pred_proba = model.predict_proba(x_test)[:, 1]
 
             accuracy = accuracy_score(y_test, y_pred)
             precision = precision_score(y_test, y_pred)
@@ -424,7 +424,7 @@ def evaluate_classification_models(best_models, X_test, y_test):
 
     model_metrics = {}
     for model_name, model in best_models.items():
-        metrics = save_results(model_name, model, X_test, y_test)
+        metrics = save_results(model_name, model, x_test, y_test)
         if metrics[0] is not None:
             y_pred_proba, roc_auc, pr_auc = metrics
             model_metrics[model_name] = {
@@ -750,9 +750,9 @@ def main():
         logging.info("Todas las columnas categóricas han sido codificadas correctamente.")
 
     perform_eda(data)
-    X_train, X_test, y_train, y_test, feature_names = preprocess_data(data)
-    best_models = train_classification_models(X_train, y_train)
-    model_metrics = evaluate_classification_models(best_models, X_test, y_test)
+    x_train, x_test, y_train, y_test, feature_names = preprocess_data(data)
+    best_models = train_classification_models(x_train, y_train)
+    model_metrics = evaluate_classification_models(best_models, x_test, y_test)
     plot_classification_curves(model_metrics, y_test)
     plot_feature_importance(best_models, feature_names)
     anomaly_results = detect_anomalies(data)
