@@ -2,12 +2,14 @@ import json
 import random
 from paho.mqtt import client as mqtt_client
 
+PY_CLIENT_ID = f'iot_srv_python_{random.randint(0, 1_000_000)}'
+
 def connect_mqtt():
     # client_id = f'python-mqtt-{random.randint(0, 1000)}'
-    client_id = 'flutter_client'
+    client_id = PY_CLIENT_ID
     broker = 'broker.emqx.io'
     port = 1883
-    topic = 'predictive_maintenance/mqtt'
+    topic = 'flutter/sensors/2'
 
     username = 'alvaro'
     password = 'public'
@@ -18,13 +20,13 @@ def connect_mqtt():
     MAX_RECONNECT_COUNT = 12
     MAX_RECONNECT_DELAY = 60
 
-    def on_connect(client, userdata, flags, rc, parameters):
+    def on_connect(client, userdata, flags, rc, properties=None):
         if rc == 0:
             print("Connected to MQTT Broker!")
         else:
             print("Failed to connect, return code %d\n", rc)
 
-    def on_disconnect(client, userdata, rc):
+    def on_disconnect(client, userdata, rc, properties=None):
         print("Disconnected with result code: %s", rc)
         reconnect_count, reconnect_delay = 0, FIRST_RECONNECT_DELAY
         while reconnect_count < MAX_RECONNECT_COUNT:
