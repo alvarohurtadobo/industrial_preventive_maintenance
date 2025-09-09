@@ -5,7 +5,6 @@ from paho.mqtt import client as mqtt_client
 PY_CLIENT_ID = f'iot_srv_python_{random.randint(0, 1_000_000)}'
 
 def connect_mqtt():
-    # client_id = f'python-mqtt-{random.randint(0, 1000)}'
     client_id = PY_CLIENT_ID
     broker = 'broker.emqx.io'
     port = 1883
