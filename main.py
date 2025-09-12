@@ -35,12 +35,19 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 warnings.filterwarnings('ignore')
 
 # Configuración de directorios y archivos
-RESULTS_DIR = "results"
+INPUTS_DIR = "inputs"
+RESULTS_DIR = "outputs"
 EXCEL_FILE = os.path.join(RESULTS_DIR, 'model_evaluation.xlsx')
 PDF_REPORT = os.path.join(RESULTS_DIR, "technical_report.pdf")
 
 def setup_directories():
     """Crear directorios necesarios."""
+    if not os.path.exists(INPUTS_DIR):
+        os.makedirs(INPUTS_DIR)
+        logging.info(f"Directorio '{INPUTS_DIR}' creado.")
+    else:
+        logging.info(f"Directorio '{INPUTS_DIR}' ya existe.")
+
     if not os.path.exists(RESULTS_DIR):
         os.makedirs(RESULTS_DIR)
         logging.info(f"Directorio '{RESULTS_DIR}' creado.")
@@ -57,14 +64,14 @@ def setup_directories():
 def generate_simulated_temporal_data():
     """Generar datos simulados temporales para múltiples equipos."""
     np.random.seed(42)
-    n_equipment = 100  # Número de equipos
-    n_time_steps = 40  # Número de tiempos por equipo
+    n_equipment = 100  # Number of devices
+    n_time_steps = 40  # Nunber of samples per device
 
-    # Crear listas para almacenar los datos
+    # Create an array for the records
     data_records = []
 
     for equipment in range(1, n_equipment + 1):
-        # Asignar un tipo de proceso fijo por equipo
+        # Assign time, for simplicity 1 second period
         process_type = np.random.choice(['Vibrations', 'Oil Analysis', 'Hours Operated'])
         for t in range(1, n_time_steps + 1):
             record = {
@@ -73,7 +80,7 @@ def generate_simulated_temporal_data():
                 'process_type': process_type
             }
 
-            # Simulación de características con tendencias y ruido
+            # Simulate according to the characteristics
             if process_type == 'Vibrations':
                 vib = np.sin(t / 5) + np.random.normal(0, 0.5)
                 temp = 20 + 2 * vib + np.random.normal(0, 0.5)
@@ -90,7 +97,7 @@ def generate_simulated_temporal_data():
                     'load': np.nan
                 })
             elif process_type == 'Oil Analysis':
-                oil_q = np.random.uniform(0, 100) + t * 0.1  # Incremento leve con el tiempo
+                oil_q = np.random.uniform(0, 100) + t * 0.1  # Small increment with time
                 cont_level = 50 + 0.5 * oil_q + np.random.normal(0, 5)
                 acid = 10 + 0.3 * (oil_q ** 1.5) + np.random.normal(0, 2)
                 record.update({
@@ -105,8 +112,8 @@ def generate_simulated_temporal_data():
                     'load': np.nan
                 })
             elif process_type == 'Hours Operated':
-                hours_op = np.random.exponential(scale=50) + t * 0.5  # Acumulativo con el tiempo
-                maint_hist = np.random.poisson(lam=2)  # Historial de mantenimiento
+                hours_op = np.random.exponential(scale=50) + t * 0.5  # Proportional to time
+                maint_hist = np.random.poisson(lam=2)  # Maintenance history
                 ld = 100 + 0.1 * t + np.random.normal(0, 10)
                 record.update({
                     'vibration': np.nan,
@@ -120,7 +127,7 @@ def generate_simulated_temporal_data():
                     'load': ld
                 })
 
-            # Simulación de fallos
+            # Failure emulation
             if process_type == 'Vibrations':
                 fail = int((0.3 * vib + 0.2 * temp - 0.1 * pres + np.random.normal(0, 0.5)) > 1)
             elif process_type == 'Oil Analysis':
@@ -129,41 +136,49 @@ def generate_simulated_temporal_data():
                 fail = int((0.05 * hours_op + 0.1 * maint_hist - 0.02 * ld + np.random.normal(0, 1)) > 3)
             record['failure'] = fail
 
-            # Introducción de anomalías aleatorias
-            if np.random.rand() < 0.02:  # 2% de probabilidad de anomalía
+            # Introduction of random anomalies
+            if np.random.rand() < 0.02:  # 2% anomaly likelihood
                 record['anomaly'] = 1
-                # Alterar algunas variables
+                # Alter some variables
                 if process_type == 'Vibrations':
-                    record['vibration'] += np.random.normal(10, 5)  # Anomalía en vibración
+                    record['vibration'] += np.random.normal(10, 5)  # Vibration
                 elif process_type == 'Oil Analysis':
-                    record['oil_quality'] += np.random.uniform(50, 100)  # Anomalía en calidad de aceite
+                    record['oil_quality'] += np.random.uniform(50, 100)  # Oil quality
                 elif process_type == 'Hours Operated':
-                    record['load'] += np.random.uniform(50, 100)  # Anomalía en carga
+                    record['load'] += np.random.uniform(50, 100)  # Load
             else:
                 record['anomaly'] = 0
 
             data_records.append(record)
 
-    # Crear DataFrame
+    # Create DataFrame
 
     # data = pd.read_csv('data/data.csv')
     data = pd.DataFrame(data_records)
 
-    # Manejar valores NaN (rellenar con la media de cada columna numérica)
+    print(f"Data shape: {data.shape}")
+    print(f"Data info: {data.info()}")
+    print(f"Data describe: {data.describe()}")
+    # print(f"Data median: {data.median()}")
+
+    # Handle Nan variables
     numeric_cols = data.select_dtypes(include=[np.number]).columns
     data[numeric_cols] = data[numeric_cols].fillna(data[numeric_cols].mean())
 
-    # Asegurarse de que 'anomaly' es de tipo entero
+    # Make sure 'anomaly' is integer
     data['anomaly'] = data['anomaly'].astype(int)
 
-    logging.info("Datos temporales simulados generados correctamente.")
+    logging.info("Temporal data emulated correctly.")
     return data
+
+def exportToCSV(data):
+    data.to_csv(os.path.join(INPUTS_DIR, 'emulated_data.csv'), index=False)
 
 def handle_data_types(data):
     """
-    Asegura que todas las columnas tengan los tipos de datos correctos.
-    - Convierte variables categóricas en numéricas mediante codificación.
-    - Asegura que las variables numéricas sean del tipo adecuado.
+    Makes sure all data types are correct
+    - Converts categoric variables into numeric acording to codification.
+    - Makes sure numeric variables are of the correct type.
     """
     categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
 
@@ -183,65 +198,65 @@ def handle_data_types(data):
             encoded_cols = encoder.get_feature_names_out(categorical_cols)
             encoded_df = pd.DataFrame(encoded_data, columns=encoded_cols, index=data.index)
             data = pd.concat([data.drop(categorical_cols, axis=1), encoded_df], axis=1)
-            logging.info("Variables categóricas codificadas correctamente.")
+            logging.info("Categoric variables coded correctly.")
         except Exception as e:
-            logging.error(f"Error al codificar variables categóricas: {e}")
+            logging.error(f"Error codifyng variables: {e}")
             raise
     else:
-        logging.info("No se encontraron columnas categóricas para codificar.")
+        logging.info("Not found categoric variable columns.")
 
     # Asegurar que todas las columnas numéricas sean de tipo float
     numeric_cols = data.select_dtypes(include=[np.number]).columns
     data[numeric_cols] = data[numeric_cols].astype(float)
-    logging.info("Tipos de datos numéricos asegurados como float.")
+    logging.info("Ensured numeric data type as float.")
 
     # Verificación adicional
     remaining_categorical = data.select_dtypes(include=['object', 'category']).columns.tolist()
     if remaining_categorical:
-        raise ValueError(f"Las siguientes columnas aún son categóricas y no han sido codificadas: {remaining_categorical}")
+        raise ValueError(f"Following columns have not been coded yet and are still categoric: {remaining_categorical}")
     else:
-        logging.info("Todas las columnas categóricas han sido codificadas.")
+        logging.info("All columns have been coded")
 
     return data
 
 def perform_eda(data):
-    """Realizar Análisis Exploratorio de Datos (EDA)."""
+    """Perform exploratory analysis of the data (EDA)."""
     try:
-        profile = ProfileReport(data, title='Análisis Exploratorio de Datos', explorative=True)
-        eda_file = os.path.join(RESULTS_DIR, "EDA_del_dataset.html")
+        profile = ProfileReport(data, title='Exploratory analysis of the data', explorative=True)
+        eda_file = os.path.join(RESULTS_DIR, "dataset_EDA.html")
         profile.to_file(eda_file)
-        logging.info(f"Reporte de EDA generado en '{eda_file}'.")
+        logging.info(f"EDA report saved to '{eda_file}'.")
     except Exception as e:
-        logging.error(f"Error al generar el reporte de EDA: {e}")
+        logging.error(f"Error generating EDA report: {e}")
 
-    # Distribución de fallos y no fallos
+    # Distribution of failures and not failures
     plt.figure(figsize=(8, 6))
     sns.countplot(x='failure', data=data, palette='coolwarm')
-    plt.title('Distribución de Fallos vs No Fallos')
-    plt.xlabel('Fallo')
-    plt.ylabel('Conteo')
+    plt.title('Failure/Not Failure distribution')
+    plt.xlabel('Failure')
+    plt.ylabel('Count')
     plt.savefig(os.path.join(RESULTS_DIR, 'failure_distribution.png'), dpi=300)
     plt.close()
-    logging.info("Gráfico 'failure_distribution.png' guardado.")
+    logging.info("Plot 'failure_distribution.png' saved.")
 
-    # Matriz de correlación
+    # Correlation matrix
     plt.figure(figsize=(14, 10))
     corr = data.corr()
     sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', linewidths=0.5)
     plt.title('Matriz de Correlación de Datos Simulados')
     plt.savefig(os.path.join(RESULTS_DIR, 'correlation_matrix.png'), dpi=300)
     plt.close()
-    logging.info("Gráfico 'correlation_matrix.png' guardado.")
+    logging.info("Plot 'correlation_matrix.png' saved.")
 
-    # Histogramas de cada variable
+    # Hystogram per variable
     numeric_columns = data.select_dtypes(include=[np.number]).columns
     data[numeric_columns].hist(bins=30, figsize=(20, 15), color='steelblue', edgecolor='black')
-    plt.suptitle('Histogramas de Variables', fontsize=16)
+    plt.suptitle('Histograms of Variables', fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     histograms_path = os.path.join(RESULTS_DIR, 'histograms.png')
     plt.savefig(histograms_path, dpi=300)
     plt.close()
-    logging.info(f"Gráfico 'histograms.png' guardado.")
+    logging.info(f"Plot 'histograms.png' saved.")
 
     # Boxplots para detectar outliers
     numeric_columns = data.select_dtypes(include=[np.number]).columns
@@ -259,9 +274,9 @@ def perform_eda(data):
 
     for idx, column in enumerate(feature_columns):
         sns.boxplot(y=data[column], ax=axes[idx], color='lightgreen')
-        axes[idx].set_title(f'Boxplot de {column}')
+        axes[idx].set_title(f'Boxplot of {column}')
 
-    # Eliminar subplots vacíos si los hay
+    # Delete subplots if any
     for ax in axes[num_features:]:
         fig.delaxes(ax)
 
@@ -269,41 +284,41 @@ def perform_eda(data):
     boxplots_path = os.path.join(RESULTS_DIR, 'boxplots.png')
     plt.savefig(boxplots_path, dpi=300)
     plt.close()
-    logging.info(f"Gráfico 'boxplots.png' guardado.")
+    logging.info(f"Plot 'boxplots.png' saved.")
 
-    # Pairplot para ver relaciones entre variables
+    # Pairplot to validate relations between variables
     sns.pairplot(data.drop(['equipment_id', 'time_step'], axis=1, errors='ignore'), hue='failure', palette='coolwarm', diag_kind='kde')
-    plt.suptitle('Pairplot de Variables', y=1.02)
+    plt.suptitle('Pairplot of Variables', y=1.02)
     pairplot_path = os.path.join(RESULTS_DIR, 'pairplot.png')
     plt.savefig(pairplot_path, dpi=300)
     plt.close()
-    logging.info(f"Gráfico 'pairplot.png' guardado.")
+    logging.info(f"Plot 'pairplot.png' saved.")
 
 def preprocess_data(data):
-    """Preprocesar los datos: escalado, balanceo y división en conjuntos de entrenamiento y prueba."""
-    # Variables independientes (X) y dependiente (y)
+    """Preprocess data: scaling, balancing and splif of testing and trainging data."""
+    # Independent variables (X) and dependent variables (y)
     X = data.drop(['failure', 'equipment_id', 'time_step', 'anomaly'], axis=1, errors='ignore')
     y = data['failure'].astype(int)  # Asegurar que 'failure' es de tipo entero
 
-    # Escalado de características
+    # Scaling characteristics
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    logging.info("Características escaladas correctamente.")
+    logging.info("Successfully scaled characteristics escaladas correctamente.")
 
-    # Manejo de desbalance de clases con SMOTE
+    # Handling unbalance of classes using SMOTE
     smote = SMOTE(random_state=42)
     X_resampled, y_resampled = smote.fit_resample(X_scaled, y)
-    logging.info("Datos balanceados usando SMOTE correctamente.")
+    logging.info("Successfully balanced data used for SMOTE.")
 
-    # Dividir en conjunto de entrenamiento y prueba
-    X_train, X_test, y_train, y_test = train_test_split(
+    # Split training and testing data
+    x_train, x_test, y_train, y_test = train_test_split(
         X_resampled, y_resampled, test_size=0.3, random_state=42, stratify=y_resampled
     )
-    logging.info("Datos divididos en entrenamiento y prueba correctamente.")
-    return X_train, X_test, y_train, y_test, X.columns
+    logging.info("Successful division of data for training and testing.")
+    return x_train, x_test, y_train, y_test, X.columns
 
-def train_classification_models(X_train, y_train):
-    """Entrenar modelos de Machine Learning utilizando GridSearchCV."""
+def train_classification_models(x_train, y_train):
+    """Train ML models using GridSearchCV"""
     models = {
         'RandomForest': {
             'model': RandomForestClassifier(random_state=42),
@@ -339,23 +354,23 @@ def train_classification_models(X_train, y_train):
 
     best_models = {}
     for model_name, mp in models.items():
-        logging.info(f"Entrenando y ajustando hiperparámetros para {model_name}...")
+        logging.info(f"Training and adjunsting parameters for model: {model_name}...")
         try:
             grid = GridSearchCV(mp['model'], mp['params'], cv=5, scoring='roc_auc', n_jobs=-1)
-            grid.fit(X_train, y_train)
+            grid.fit(x_train, y_train)
             best_models[model_name] = grid.best_estimator_
-            logging.info(f"Mejores parámetros para {model_name}: {grid.best_params_}")
-            logging.info(f"Mejor ROC AUC en validación para {model_name}: {grid.best_score_:.4f}\n")
+            logging.info(f"Best parameters for {model_name}: {grid.best_params_}")
+            logging.info(f"Best ROC AUC validation for {model_name}: {grid.best_score_:.4f}\n")
         except Exception as e:
-            logging.error(f"Error al entrenar {model_name}: {e}")
+            logging.error(f"Error training {model_name}: {e}")
     return best_models
 
-def evaluate_classification_models(best_models, X_test, y_test):
+def evaluate_classification_models(best_models, x_test, y_test):
     """Evaluar los modelos entrenados y guardar los resultados."""
-    def save_results(model_name, model, X_test, y_test):
+    def save_results(model_name, model, x_test, y_test):
         try:
-            y_pred = model.predict(X_test)
-            y_pred_proba = model.predict_proba(X_test)[:, 1]
+            y_pred = model.predict(x_test)
+            y_pred_proba = model.predict_proba(x_test)[:, 1]
 
             accuracy = accuracy_score(y_test, y_pred)
             precision = precision_score(y_test, y_pred)
@@ -409,7 +424,7 @@ def evaluate_classification_models(best_models, X_test, y_test):
 
     model_metrics = {}
     for model_name, model in best_models.items():
-        metrics = save_results(model_name, model, X_test, y_test)
+        metrics = save_results(model_name, model, x_test, y_test)
         if metrics[0] is not None:
             y_pred_proba, roc_auc, pr_auc = metrics
             model_metrics[model_name] = {
@@ -724,24 +739,25 @@ def main():
     """Main function for overall flow"""
     setup_directories()
     data = generate_simulated_temporal_data()
+    exportToCSV(data)
     data = handle_data_types(data)  # Manejar tipos de datos antes del EDA
 
-    # # Verificación adicional
-    # categorical_cols_remaining = data.select_dtypes(include=['object', 'category']).columns.tolist()
-    # if categorical_cols_remaining:
-    #     raise ValueError(f"Las siguientes columnas aún son categóricas y no han sido codificadas: {categorical_cols_remaining}")
-    # else:
-    #     logging.info("Todas las columnas categóricas han sido codificadas correctamente.")
+    # Verificación adicional
+    categorical_cols_remaining = data.select_dtypes(include=['object', 'category']).columns.tolist()
+    if categorical_cols_remaining:
+        raise ValueError(f"Las siguientes columnas aún son categóricas y no han sido codificadas: {categorical_cols_remaining}")
+    else:
+        logging.info("Todas las columnas categóricas han sido codificadas correctamente.")
 
-    # perform_eda(data)
-    # X_train, X_test, y_train, y_test, feature_names = preprocess_data(data)
-    # best_models = train_classification_models(X_train, y_train)
-    # model_metrics = evaluate_classification_models(best_models, X_test, y_test)
-    # plot_classification_curves(model_metrics, y_test)
-    # plot_feature_importance(best_models, feature_names)
-    # anomaly_results = detect_anomalies(data)
-    # create_pdf_report(data, model_metrics, feature_names, best_models, anomaly_results)
-    # logging.info("Proceso completado exitosamente. Todos los resultados y el informe se han guardado en la carpeta 'resultados'.")
+    perform_eda(data)
+    x_train, x_test, y_train, y_test, feature_names = preprocess_data(data)
+    best_models = train_classification_models(x_train, y_train)
+    model_metrics = evaluate_classification_models(best_models, x_test, y_test)
+    plot_classification_curves(model_metrics, y_test)
+    plot_feature_importance(best_models, feature_names)
+    anomaly_results = detect_anomalies(data)
+    create_pdf_report(data, model_metrics, feature_names, best_models, anomaly_results)
+    logging.info("Proceso completado exitosamente. Todos los resultados y el informe se han guardado en la carpeta 'resultados'.")
 
 if __name__ == "__main__":
     main()
