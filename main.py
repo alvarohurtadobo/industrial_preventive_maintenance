@@ -365,6 +365,10 @@ def train_classification_models(x_train, y_train):
             logging.error(f"Error training {model_name}: {e}")
     return best_models
 
+def export_models(best_models):
+    for name, model in best_models.items():
+        joblib.dump(model, f"{name}_model.pkl")
+
 def evaluate_classification_models(best_models, x_test, y_test):
     """Evaluar los modelos entrenados y guardar los resultados."""
     def save_results(model_name, model, x_test, y_test):
@@ -753,6 +757,7 @@ def main():
     x_train, x_test, y_train, y_test, feature_names = preprocess_data(data)
     best_models = train_classification_models(x_train, y_train)
     model_metrics = evaluate_classification_models(best_models, x_test, y_test)
+    export_models(best_models)
     plot_classification_curves(model_metrics, y_test)
     plot_feature_importance(best_models, feature_names)
     anomaly_results = detect_anomalies(data)
