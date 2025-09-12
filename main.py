@@ -1,5 +1,6 @@
 import os
 import math
+import joblib
 import warnings
 import logging
 import numpy as np
@@ -37,6 +38,7 @@ warnings.filterwarnings('ignore')
 # Configuración de directorios y archivos
 INPUTS_DIR = "inputs"
 RESULTS_DIR = "outputs"
+MODELS_DIR = "models"
 EXCEL_FILE = os.path.join(RESULTS_DIR, 'model_evaluation.xlsx')
 PDF_REPORT = os.path.join(RESULTS_DIR, "technical_report.pdf")
 
@@ -53,6 +55,12 @@ def setup_directories():
         logging.info(f"Directorio '{RESULTS_DIR}' creado.")
     else:
         logging.info(f"Directorio '{RESULTS_DIR}' ya existe.")
+
+    if not os.path.exists(MODELS_DIR):
+        os.makedirs(MODELS_DIR)
+        logging.info(f"Directorio '{MODELS_DIR}' creado.")
+    else:
+        logging.info(f"Directorio '{MODELS_DIR}' ya existe.")
 
     if not os.path.exists(EXCEL_FILE):
         with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
@@ -367,7 +375,7 @@ def train_classification_models(x_train, y_train):
 
 def export_models(best_models):
     for name, model in best_models.items():
-        joblib.dump(model, f"{name}_model.pkl")
+        joblib.dump(model, f"{MODELS_DIR}/{name}_model.pkl")
 
 def evaluate_classification_models(best_models, x_test, y_test):
     """Evaluar los modelos entrenados y guardar los resultados."""
