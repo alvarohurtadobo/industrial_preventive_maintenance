@@ -29,13 +29,13 @@ from ydata_profiling import ProfileReport
 from packaging import version
 import sklearn
 
-# Configuración de logging
+# Logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Ignorar advertencias para una salida más limpia
+# Ignore warnings for cleaner output
 warnings.filterwarnings('ignore')
 
-# Configuración de directorios y archivos
+# Directory and file configuration
 INPUTS_DIR = "inputs"
 RESULTS_DIR = "outputs"
 MODELS_DIR = "models"
@@ -43,37 +43,37 @@ EXCEL_FILE = os.path.join(RESULTS_DIR, 'model_evaluation.xlsx')
 PDF_REPORT = os.path.join(RESULTS_DIR, "technical_report.pdf")
 
 def setup_directories():
-    """Crear directorios necesarios."""
+    """Create necessary directories."""
     if not os.path.exists(INPUTS_DIR):
         os.makedirs(INPUTS_DIR)
-        logging.info(f"Directorio '{INPUTS_DIR}' creado.")
+        logging.info(f"Directory '{INPUTS_DIR}' created.")
     else:
-        logging.info(f"Directorio '{INPUTS_DIR}' ya existe.")
+        logging.info(f"Directory '{INPUTS_DIR}' already exists.")
 
     if not os.path.exists(RESULTS_DIR):
         os.makedirs(RESULTS_DIR)
-        logging.info(f"Directorio '{RESULTS_DIR}' creado.")
+        logging.info(f"Directory '{RESULTS_DIR}' created.")
     else:
-        logging.info(f"Directorio '{RESULTS_DIR}' ya existe.")
+        logging.info(f"Directory '{RESULTS_DIR}' already exists.")
 
     if not os.path.exists(MODELS_DIR):
         os.makedirs(MODELS_DIR)
-        logging.info(f"Directorio '{MODELS_DIR}' creado.")
+        logging.info(f"Directory '{MODELS_DIR}' created.")
     else:
-        logging.info(f"Directorio '{MODELS_DIR}' ya existe.")
+        logging.info(f"Directory '{MODELS_DIR}' already exists.")
 
     if not os.path.exists(EXCEL_FILE):
         with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
-            pd.DataFrame().to_excel(writer)  # Crear archivo Excel vacío
-        logging.info(f"Archivo Excel '{EXCEL_FILE}' creado.")
+            pd.DataFrame().to_excel(writer)  # Create empty Excel file
+        logging.info(f"Excel file '{EXCEL_FILE}' created.")
     else:
-        logging.info(f"Archivo Excel '{EXCEL_FILE}' ya existe.")
+        logging.info(f"Excel file '{EXCEL_FILE}' already exists.")
 
 def generate_simulated_temporal_data():
-    """Generar datos simulados temporales para múltiples equipos."""
+    """Generate simulated temporal data for multiple equipment."""
     np.random.seed(42)
     n_equipment = 100  # Number of devices
-    n_time_steps = 40  # Nunber of samples per device
+    n_time_steps = 40  # Number of samples per device
 
     # Create an array for the records
     data_records = []
@@ -185,43 +185,43 @@ def exportToCSV(data):
 def handle_data_types(data):
     """
     Makes sure all data types are correct
-    - Converts categoric variables into numeric acording to codification.
+    - Converts categorical variables into numeric according to codification.
     - Makes sure numeric variables are of the correct type.
     """
     categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
 
-    # Determinar la versión de scikit-learn
+    # Determine scikit-learn version
     skl_version = version.parse(sklearn.__version__)
 
-    # Definir los parámetros para OneHotEncoder según la versión
+    # Define OneHotEncoder parameters according to version
     if skl_version >= version.parse("1.2"):
         encoder = OneHotEncoder(drop='first', sparse_output=False)
     else:
         encoder = OneHotEncoder(drop='first', sparse=False)
 
-    # Codificar variables categóricas usando OneHotEncoder
+    # Encode categorical variables using OneHotEncoder
     if categorical_cols:
         try:
             encoded_data = encoder.fit_transform(data[categorical_cols])
             encoded_cols = encoder.get_feature_names_out(categorical_cols)
             encoded_df = pd.DataFrame(encoded_data, columns=encoded_cols, index=data.index)
             data = pd.concat([data.drop(categorical_cols, axis=1), encoded_df], axis=1)
-            logging.info("Categoric variables coded correctly.")
+            logging.info("Categorical variables coded correctly.")
         except Exception as e:
-            logging.error(f"Error codifyng variables: {e}")
+            logging.error(f"Error encoding variables: {e}")
             raise
     else:
-        logging.info("Not found categoric variable columns.")
+        logging.info("No categorical variable columns found.")
 
-    # Asegurar que todas las columnas numéricas sean de tipo float
+    # Ensure all numeric columns are of float type
     numeric_cols = data.select_dtypes(include=[np.number]).columns
     data[numeric_cols] = data[numeric_cols].astype(float)
     logging.info("Ensured numeric data type as float.")
 
-    # Verificación adicional
+    # Additional verification
     remaining_categorical = data.select_dtypes(include=['object', 'category']).columns.tolist()
     if remaining_categorical:
-        raise ValueError(f"Following columns have not been coded yet and are still categoric: {remaining_categorical}")
+        raise ValueError(f"Following columns have not been coded yet and are still categorical: {remaining_categorical}")
     else:
         logging.info("All columns have been coded")
 
@@ -251,12 +251,12 @@ def perform_eda(data):
     plt.figure(figsize=(14, 10))
     corr = data.corr()
     sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', linewidths=0.5)
-    plt.title('Matriz de Correlación de Datos Simulados')
+    plt.title('Simulated Data Correlation Matrix')
     plt.savefig(os.path.join(RESULTS_DIR, 'correlation_matrix.png'), dpi=300)
     plt.close()
     logging.info("Plot 'correlation_matrix.png' saved.")
 
-    # Hystogram per variable
+    # Histogram per variable
     numeric_columns = data.select_dtypes(include=[np.number]).columns
     data[numeric_columns].hist(bins=30, figsize=(20, 15), color='steelblue', edgecolor='black')
     plt.suptitle('Histograms of Variables', fontsize=16)
@@ -266,19 +266,19 @@ def perform_eda(data):
     plt.close()
     logging.info(f"Plot 'histograms.png' saved.")
 
-    # Boxplots para detectar outliers
+    # Boxplots to detect outliers
     numeric_columns = data.select_dtypes(include=[np.number]).columns
     feature_columns = numeric_columns.drop(['failure', 'anomaly'], errors='ignore')
     num_features = len(feature_columns)
 
-    # Definir número de columnas por fila
+    # Define number of columns per row
     num_cols = 3
-    # Calcular número de filas necesarias
+    # Calculate number of rows needed
     num_rows = math.ceil(num_features / num_cols)
 
-    # Crear una figura grande para contener todos los boxplots
+    # Create a large figure to contain all boxplots
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 6, num_rows * 4))
-    axes = axes.flatten()  # Aplanar para iterar fácilmente
+    axes = axes.flatten()  # Flatten to iterate easily
 
     for idx, column in enumerate(feature_columns):
         sns.boxplot(y=data[column], ax=axes[idx], color='lightgreen')
@@ -303,26 +303,26 @@ def perform_eda(data):
     logging.info(f"Plot 'pairplot.png' saved.")
 
 def preprocess_data(data):
-    """Preprocess data: scaling, balancing and splif of testing and trainging data."""
+    """Preprocess data: scaling, balancing and split of testing and training data."""
     # Independent variables (X) and dependent variables (y)
     X = data.drop(['failure', 'equipment_id', 'time_step', 'anomaly'], axis=1, errors='ignore')
-    y = data['failure'].astype(int)  # Asegurar que 'failure' es de tipo entero
+    y = data['failure'].astype(int)  # Ensure 'failure' is of integer type
 
     # Scaling characteristics
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    logging.info("Successfully scaled characteristics escaladas correctamente.")
+    logging.info("Successfully scaled characteristics.")
 
-    # Handling unbalance of classes using SMOTE
+    # Handling imbalance of classes using SMOTE
     smote = SMOTE(random_state=42)
     X_resampled, y_resampled = smote.fit_resample(X_scaled, y)
-    logging.info("Successfully balanced data used for SMOTE.")
+    logging.info("Successfully balanced data using SMOTE.")
 
     # Split training and testing data
     x_train, x_test, y_train, y_test = train_test_split(
         X_resampled, y_resampled, test_size=0.3, random_state=42, stratify=y_resampled
     )
-    logging.info("Successful division of data for training and testing.")
+    logging.info("Successfully split data for training and testing.")
     return x_train, x_test, y_train, y_test, X.columns
 
 def train_classification_models(x_train, y_train):
@@ -362,7 +362,7 @@ def train_classification_models(x_train, y_train):
 
     best_models = {}
     for model_name, mp in models.items():
-        logging.info(f"Training and adjunsting parameters for model: {model_name}...")
+        logging.info(f"Training and adjusting parameters for model: {model_name}...")
         try:
             grid = GridSearchCV(mp['model'], mp['params'], cv=5, scoring='roc_auc', n_jobs=-1)
             grid.fit(x_train, y_train)
@@ -378,7 +378,7 @@ def export_models(best_models):
         joblib.dump(model, f"{MODELS_DIR}/{name}_model.pkl")
 
 def evaluate_classification_models(best_models, x_test, y_test):
-    """Evaluar los modelos entrenados y guardar los resultados."""
+    """Evaluate trained models and save results."""
     def save_results(model_name, model, x_test, y_test):
         try:
             y_pred = model.predict(x_test)
@@ -394,7 +394,7 @@ def evaluate_classification_models(best_models, x_test, y_test):
             report = classification_report(y_test, y_pred, output_dict=True)
             conf_matrix = confusion_matrix(y_test, y_pred)
 
-            # Imprimir resultados
+            # Print results
             logging.info(f"{model_name} Results:")
             logging.info(f"Accuracy: {accuracy:.4f}")
             logging.info(f"Precision: {precision:.4f}")
@@ -403,35 +403,35 @@ def evaluate_classification_models(best_models, x_test, y_test):
             logging.info(f"ROC AUC: {roc_auc:.4f}")
             logging.info(f"PR AUC: {pr_auc:.4f}\n")
 
-            # Guardar los resultados en un archivo Excel
+            # Save results to Excel file
             df_report = pd.DataFrame(report).transpose()
 
-            # Verificar si la hoja ya existe y eliminarla si es necesario
+            # Check if sheet already exists and delete if necessary
             book = load_workbook(EXCEL_FILE)
             if f'{model_name}_report' in book.sheetnames:
                 del book[f'{model_name}_report']
                 book.save(EXCEL_FILE)
-                logging.info(f"Hoja '{model_name}_report' existente eliminada.")
+                logging.info(f"Existing sheet '{model_name}_report' deleted.")
 
             with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a") as writer:
                 df_report.to_excel(writer, sheet_name=f'{model_name}_report')
 
-            # Guardar la matriz de confusión
+            # Save confusion matrix
             plt.figure(figsize=(8, 6))
             sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues',
-                        xticklabels=['No Fallo', 'Fallo'], yticklabels=['No Fallo', 'Fallo'])
-            plt.title(f'Matriz de Confusión - {model_name}')
-            plt.xlabel('Predicción')
-            plt.ylabel('Realidad')
+                        xticklabels=['No Failure', 'Failure'], yticklabels=['No Failure', 'Failure'])
+            plt.title(f'Confusion Matrix - {model_name}')
+            plt.xlabel('Prediction')
+            plt.ylabel('Actual')
             plt.tight_layout()
             conf_matrix_path = os.path.join(RESULTS_DIR, f'{model_name}_confusion_matrix.png')
             plt.savefig(conf_matrix_path, dpi=300)
             plt.close()
-            logging.info(f"Matriz de confusión '{model_name}_confusion_matrix.png' guardada.")
+            logging.info(f"Confusion matrix '{model_name}_confusion_matrix.png' saved.")
 
             return y_pred_proba, roc_auc, pr_auc
         except Exception as e:
-            logging.error(f"Error al evaluar {model_name}: {e}")
+            logging.error(f"Error evaluating {model_name}: {e}")
             return None, None, None
 
     model_metrics = {}
@@ -447,27 +447,27 @@ def evaluate_classification_models(best_models, x_test, y_test):
     return model_metrics
 
 def plot_classification_curves(model_metrics, y_test):
-    """Plotear curvas ROC y Precision-Recall para todos los modelos."""
+    """Plot ROC and Precision-Recall curves for all models."""
     try:
         plt.figure(figsize=(12, 6))
 
-        # Curvas ROC
+        # ROC curves
         plt.subplot(1, 2, 1)
         for model_name, metrics in model_metrics.items():
             fpr, tpr, _ = roc_curve(y_test, metrics['y_pred_proba'])
             plt.plot(fpr, tpr, label=f'{model_name} (AUC = {metrics["roc_auc"]:.2f})')
         plt.plot([0, 1], [0, 1], 'k--')
-        plt.title('Curvas ROC')
-        plt.xlabel('Tasa de Falsos Positivos')
-        plt.ylabel('Tasa de Verdaderos Positivos')
+        plt.title('ROC Curves')
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
         plt.legend(loc='lower right')
 
-        # Curvas Precision-Recall
+        # Precision-Recall curves
         plt.subplot(1, 2, 2)
         for model_name, metrics in model_metrics.items():
             precision, recall, _ = precision_recall_curve(y_test, metrics['y_pred_proba'])
             plt.plot(recall, precision, label=f'{model_name} (AUC = {metrics["pr_auc"]:.2f})')
-        plt.title('Curvas Precision-Recall')
+        plt.title('Precision-Recall Curves')
         plt.xlabel('Recall')
         plt.ylabel('Precision')
         plt.legend(loc='lower left')
@@ -476,12 +476,12 @@ def plot_classification_curves(model_metrics, y_test):
         roc_pr_path = os.path.join(RESULTS_DIR, 'roc_pr_curves.png')
         plt.savefig(roc_pr_path, dpi=300)
         plt.close()
-        logging.info("Gráfico 'roc_pr_curves.png' guardado correctamente.")
+        logging.info("Plot 'roc_pr_curves.png' saved successfully.")
     except Exception as e:
-        logging.error(f"Error al plotear curvas de clasificación: {e}")
+        logging.error(f"Error plotting classification curves: {e}")
 
 def plot_feature_importance(models, feature_names):
-    """Plotear la importancia de características para modelos que lo soportan."""
+    """Plot feature importance for models that support it."""
     for model_name, model in models.items():
         if hasattr(model, 'feature_importances_'):
             try:
@@ -489,28 +489,28 @@ def plot_feature_importance(models, feature_names):
                 indices = np.argsort(importances)[::-1]
                 plt.figure(figsize=(10, 6))
                 sns.barplot(x=importances[indices], y=np.array(feature_names)[indices], palette='viridis')
-                plt.title(f'Importancia de Características - {model_name}')
-                plt.xlabel('Importancia')
-                plt.ylabel('Características')
+                plt.title(f'Feature Importance - {model_name}')
+                plt.xlabel('Importance')
+                plt.ylabel('Features')
                 plt.tight_layout()
                 fi_path = os.path.join(RESULTS_DIR, f'{model_name}_feature_importance.png')
                 plt.savefig(fi_path, dpi=300)
                 plt.close()
-                logging.info(f"Gráfico de importancia de características '{model_name}_feature_importance.png' guardado correctamente.")
+                logging.info(f"Feature importance plot '{model_name}_feature_importance.png' saved successfully.")
             except Exception as e:
-                logging.error(f"Error al plotear importancia de características para {model_name}: {e}")
+                logging.error(f"Error plotting feature importance for {model_name}: {e}")
 
 def detect_anomalies(data):
-    """Aplicar cinco algoritmos de detección de anomalías en los datos temporales."""
-    # Seleccionar características numéricas
+    """Apply five anomaly detection algorithms to temporal data."""
+    # Select numeric features
     columns_to_drop = ['equipment_id', 'time_step', 'failure', 'anomaly']
     existing_columns_to_drop = [col for col in columns_to_drop if col in data.columns]
     X_anomaly = data.drop(existing_columns_to_drop, axis=1, errors='ignore')
 
-    # Determinar la versión de scikit-learn para manejar OneHotEncoder si es necesario
+    # Determine scikit-learn version to handle OneHotEncoder if necessary
     skl_version = version.parse(sklearn.__version__)
 
-    # Codificar variables categóricas si existen
+    # Encode categorical variables if they exist
     categorical_cols = X_anomaly.select_dtypes(include=['object', 'category']).columns.tolist()
     if categorical_cols:
         try:
@@ -522,16 +522,16 @@ def detect_anomalies(data):
             encoded_cols = encoder.get_feature_names_out(categorical_cols)
             encoded_df = pd.DataFrame(encoded_data, columns=encoded_cols, index=X_anomaly.index)
             X_anomaly = pd.concat([X_anomaly.drop(categorical_cols, axis=1), encoded_df], axis=1)
-            logging.info("Variables categóricas codificadas correctamente para detección de anomalías.")
+            logging.info("Categorical variables encoded correctly for anomaly detection.")
         except Exception as e:
-            logging.error(f"Error al codificar variables categóricas para detección de anomalías: {e}")
+            logging.error(f"Error encoding categorical variables for anomaly detection: {e}")
             raise
     else:
-        logging.info("No se encontraron columnas categóricas para codificar en detección de anomalías.")
+        logging.info("No categorical columns found to encode for anomaly detection.")
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_anomaly)
-    logging.info("Características escaladas para detección de anomalías.")
+    logging.info("Features scaled for anomaly detection.")
 
     anomaly_results = pd.DataFrame(index=data.index)
     anomaly_results['True_Anomaly'] = data['anomaly'].astype(int)
@@ -542,9 +542,9 @@ def detect_anomalies(data):
         iso_forest.fit(X_scaled)
         y_pred_iso = iso_forest.predict(X_scaled)
         anomaly_results['IsolationForest'] = np.where(y_pred_iso == -1, 1, 0)
-        logging.info("IsolationForest aplicado correctamente.")
+        logging.info("IsolationForest applied successfully.")
     except Exception as e:
-        logging.error(f"Error al aplicar IsolationForest: {e}")
+        logging.error(f"Error applying IsolationForest: {e}")
 
     # 2. One-Class SVM
     try:
@@ -552,47 +552,47 @@ def detect_anomalies(data):
         one_class_svm.fit(X_scaled)
         y_pred_svm = one_class_svm.predict(X_scaled)
         anomaly_results['OneClassSVM'] = np.where(y_pred_svm == -1, 1, 0)
-        logging.info("OneClassSVM aplicado correctamente.")
+        logging.info("OneClassSVM applied successfully.")
     except Exception as e:
-        logging.error(f"Error al aplicar OneClassSVM: {e}")
+        logging.error(f"Error applying OneClassSVM: {e}")
 
     # 3. Local Outlier Factor
     try:
         lof = LocalOutlierFactor(n_neighbors=20, contamination=0.02)
         y_pred_lof = lof.fit_predict(X_scaled)
         anomaly_results['LocalOutlierFactor'] = np.where(y_pred_lof == -1, 1, 0)
-        logging.info("LocalOutlierFactor aplicado correctamente.")
+        logging.info("LocalOutlierFactor applied successfully.")
     except Exception as e:
-        logging.error(f"Error al aplicar LocalOutlierFactor: {e}")
+        logging.error(f"Error applying LocalOutlierFactor: {e}")
 
     # 4. DBSCAN
     try:
         dbscan = DBSCAN(eps=3, min_samples=5)
         dbscan_labels = dbscan.fit_predict(X_scaled)
         anomaly_results['DBSCAN'] = np.where(dbscan_labels == -1, 1, 0)
-        logging.info("DBSCAN aplicado correctamente.")
+        logging.info("DBSCAN applied successfully.")
     except Exception as e:
-        logging.error(f"Error al aplicar DBSCAN: {e}")
+        logging.error(f"Error applying DBSCAN: {e}")
 
     # 5. PCA-based Outlier Detection
     try:
         pca = PCA(n_components=2)
         X_pca = pca.fit_transform(X_scaled)
         pca_distances = np.linalg.norm(X_pca, axis=1)
-        threshold = np.percentile(pca_distances, 98)  # Top 2% como anomalías
+        threshold = np.percentile(pca_distances, 98)  # Top 2% as anomalies
         anomaly_results['PCA_Outlier'] = (pca_distances > threshold).astype(int)
-        logging.info("PCA-based Outlier Detection aplicado correctamente.")
+        logging.info("PCA-based Outlier Detection applied successfully.")
     except Exception as e:
-        logging.error(f"Error al aplicar PCA-based Outlier Detection: {e}")
+        logging.error(f"Error applying PCA-based Outlier Detection: {e}")
 
-    # Guardar resultados de anomalías
+    # Save anomaly results
     try:
         anomaly_results.to_csv(os.path.join(RESULTS_DIR, 'anomaly_detection_results.csv'), index=False)
-        logging.info("Resultados de detección de anomalías guardados en 'anomaly_detection_results.csv'.")
+        logging.info("Anomaly detection results saved to 'anomaly_detection_results.csv'.")
     except Exception as e:
-        logging.error(f"Error al guardar resultados de detección de anomalías: {e}")
+        logging.error(f"Error saving anomaly detection results: {e}")
 
-    # Evaluación de las detecciones
+    # Evaluation of detections
     try:
         for method in ['IsolationForest', 'OneClassSVM', 'LocalOutlierFactor', 'DBSCAN', 'PCA_Outlier']:
             y_true = anomaly_results['True_Anomaly']
@@ -602,37 +602,37 @@ def detect_anomalies(data):
             f1 = f1_score(y_true, y_pred, zero_division=0)
             logging.info(f"Anomaly Detection - {method}: Precision={precision:.4f}, Recall={recall:.4f}, F1-score={f1:.4f}")
     except Exception as e:
-        logging.error(f"Error al evaluar detección de anomalías: {e}")
+        logging.error(f"Error evaluating anomaly detection: {e}")
 
-    # Generar gráficos de detección de anomalías
+    # Generate anomaly detection plots
     try:
         for method in ['IsolationForest', 'OneClassSVM', 'LocalOutlierFactor', 'DBSCAN', 'PCA_Outlier']:
             plt.figure(figsize=(10, 6))
             if 'load' in data.columns:
                 sns.scatterplot(x=data.index, y=data['load'], hue=anomaly_results[method], palette='coolwarm', legend=False)
-                plt.title(f'Detección de Anomalías - {method}')
-                plt.xlabel('Índice de Muestra')
-                plt.ylabel('Carga (load)')
+                plt.title(f'Anomaly Detection - {method}')
+                plt.xlabel('Sample Index')
+                plt.ylabel('Load')
             else:
-                # Si 'load' no está disponible, usa otra variable numérica
+                # If 'load' is not available, use another numeric variable
                 numerical_vars = ['vibration', 'oil_quality', 'temperature', 'pressure', 'hours_operated']
                 available_var = next((var for var in numerical_vars if var in data.columns), 'vibration')
                 sns.scatterplot(x=data.index, y=data[available_var], hue=anomaly_results[method], palette='coolwarm', legend=False)
-                plt.title(f'Detección de Anomalías - {method}')
-                plt.xlabel('Índice de Muestra')
-                plt.ylabel(f'Valor de {available_var}')
+                plt.title(f'Anomaly Detection - {method}')
+                plt.xlabel('Sample Index')
+                plt.ylabel(f'{available_var} Value')
             plt.tight_layout()
             anomaly_plot_path = os.path.join(RESULTS_DIR, f'{method}_anomaly_detection.png')
             plt.savefig(anomaly_plot_path, dpi=300)
             plt.close()
-            logging.info(f"Gráfico de detección de anomalías '{method}_anomaly_detection.png' guardado correctamente.")
+            logging.info(f"Anomaly detection plot '{method}_anomaly_detection.png' saved successfully.")
     except Exception as e:
-        logging.error(f"Error al generar gráficos de detección de anomalías: {e}")
+        logging.error(f"Error generating anomaly detection plots: {e}")
 
     return anomaly_results
 
 def create_pdf_report(data, model_metrics, feature_names, best_models, anomaly_results):
-    """Crear un informe PDF con los gráficos generados."""
+    """Create a PDF report with generated plots."""
     try:
         pdf_file = PDF_REPORT
         doc = SimpleDocTemplate(pdf_file, pagesize=A4,
@@ -642,124 +642,124 @@ def create_pdf_report(data, model_metrics, feature_names, best_models, anomaly_r
         styles.add(ParagraphStyle(name='CenterTitle', alignment=1, fontSize=16, spaceAfter=20))
         flowables = []
 
-        # Título
-        flowables.append(Paragraph("Informe Técnico: Análisis de Mantenimiento Predictivo y Detección de Anomalías", styles['CenterTitle']))
+        # Title
+        flowables.append(Paragraph("Technical Report: Predictive Maintenance Analysis and Anomaly Detection", styles['CenterTitle']))
 
-        # Descripción general
+        # General description
         description = (
-            "Este informe presenta un análisis completo de mantenimiento predictivo utilizando técnicas de Machine Learning y Detección de Anomalías. "
-            "Se generaron datos simulados temporales para múltiples equipos a lo largo de 40 tiempos para predecir fallos y detectar anomalías en su evolución. "
-            "Se entrenaron múltiples modelos y se evaluaron sus desempeños mediante métricas estándar y visualizaciones detalladas."
+            "This report presents a comprehensive analysis of predictive maintenance using Machine Learning techniques and Anomaly Detection. "
+            "Simulated temporal data was generated for multiple equipment over 40 time steps to predict failures and detect anomalies in their evolution. "
+            "Multiple models were trained and their performance was evaluated using standard metrics and detailed visualizations."
         )
         flowables.append(Paragraph(description, styles['Normal']))
         flowables.append(Spacer(1, 12))
 
-        # EDA: Distribución de Fallos
-        flowables.append(Paragraph("1. Análisis Exploratorio de Datos (EDA)", styles['Heading2']))
+        # EDA: Failure Distribution
+        flowables.append(Paragraph("1. Exploratory Data Analysis (EDA)", styles['Heading2']))
         flowables.append(Spacer(1, 12))
-        flowables.append(Paragraph("Figura 1: Distribución de Fallos vs No Fallos", styles['Heading3']))
+        flowables.append(Paragraph("Figure 1: Failure vs No Failure Distribution", styles['Heading3']))
         flowables.append(Image(os.path.join(RESULTS_DIR, 'failure_distribution.png'), width=400, height=300))
         flowables.append(Spacer(1, 12))
 
-        # EDA: Matriz de Correlación
-        flowables.append(Paragraph("Figura 2: Matriz de Correlación de Datos Simulados", styles['Heading3']))
+        # EDA: Correlation Matrix
+        flowables.append(Paragraph("Figure 2: Simulated Data Correlation Matrix", styles['Heading3']))
         flowables.append(Image(os.path.join(RESULTS_DIR, 'correlation_matrix.png'), width=500, height=400))
         flowables.append(Spacer(1, 12))
 
-        # EDA: Histogramas
-        flowables.append(Paragraph("Figura 3: Histogramas de Variables", styles['Heading3']))
+        # EDA: Histograms
+        flowables.append(Paragraph("Figure 3: Variable Histograms", styles['Heading3']))
         flowables.append(Image(os.path.join(RESULTS_DIR, 'histograms.png'), width=500, height=400))
         flowables.append(Spacer(1, 12))
 
         # EDA: Boxplots
-        flowables.append(Paragraph("Figura 4: Boxplots de Variables", styles['Heading3']))
+        flowables.append(Paragraph("Figure 4: Variable Boxplots", styles['Heading3']))
         flowables.append(Image(os.path.join(RESULTS_DIR, 'boxplots.png'), width=500, height=400))
         flowables.append(Spacer(1, 12))
 
         # EDA: Pairplot
-        flowables.append(Paragraph("Figura 5: Pairplot de Variables", styles['Heading3']))
+        flowables.append(Paragraph("Figure 5: Variable Pairplot", styles['Heading3']))
         flowables.append(Image(os.path.join(RESULTS_DIR, 'pairplot.png'), width=500, height=400))
         flowables.append(Spacer(1, 12))
 
-        # Detección de Anomalías
-        flowables.append(Paragraph("2. Detección de Anomalías", styles['Heading2']))
+        # Anomaly Detection
+        flowables.append(Paragraph("2. Anomaly Detection", styles['Heading2']))
         flowables.append(Spacer(1, 12))
-        flowables.append(Paragraph("Se aplicaron cinco algoritmos diferentes de detección de anomalías para identificar comportamientos inusuales en los datos temporales.", styles['Normal']))
+        flowables.append(Paragraph("Five different anomaly detection algorithms were applied to identify unusual behaviors in temporal data.", styles['Normal']))
         flowables.append(Spacer(1, 12))
-        # Incluir gráficos de detección de anomalías
+        # Include anomaly detection plots
         for idx, method in enumerate(['IsolationForest', 'OneClassSVM', 'LocalOutlierFactor', 'DBSCAN', 'PCA_Outlier'], start=1):
             anomaly_plot_path = os.path.join(RESULTS_DIR, f'{method}_anomaly_detection.png')
             if os.path.exists(anomaly_plot_path):
-                flowables.append(Paragraph(f"Figura {5 + idx}: Detección de Anomalías - {method}", styles['Heading3']))
+                flowables.append(Paragraph(f"Figure {5 + idx}: Anomaly Detection - {method}", styles['Heading3']))
                 flowables.append(Image(anomaly_plot_path, width=400, height=300))
                 flowables.append(Spacer(1, 12))
 
-        # Evaluación de Modelos de Clasificación
-        flowables.append(Paragraph("3. Evaluación de Modelos de Clasificación", styles['Heading2']))
+        # Classification Model Evaluation
+        flowables.append(Paragraph("3. Classification Model Evaluation", styles['Heading2']))
         flowables.append(Spacer(1, 12))
 
-        # Agregar métricas de modelos
+        # Add model metrics
         for idx, (model_name, metrics) in enumerate(model_metrics.items(), start=1):
             flowables.append(Paragraph(f"3.{idx} {model_name}", styles['Heading3']))
             flowables.append(Paragraph(f"ROC AUC: {metrics['roc_auc']:.4f}", styles['Normal']))
             flowables.append(Paragraph(f"PR AUC: {metrics['pr_auc']:.4f}", styles['Normal']))
             flowables.append(Spacer(1, 12))
-            # Incluir matriz de confusión
+            # Include confusion matrix
             conf_matrix_path = os.path.join(RESULTS_DIR, f"{model_name}_confusion_matrix.png")
             if os.path.exists(conf_matrix_path):
-                # Ajustar el número de figura
+                # Adjust figure number
                 figure_number = 5 + len(['IsolationForest', 'OneClassSVM', 'LocalOutlierFactor', 'DBSCAN', 'PCA_Outlier']) + idx
-                flowables.append(Paragraph(f"Figura {figure_number}: Matriz de Confusión - {model_name}", styles['Heading4']))
+                flowables.append(Paragraph(f"Figure {figure_number}: Confusion Matrix - {model_name}", styles['Heading4']))
                 flowables.append(Image(conf_matrix_path, width=300, height=250))
                 flowables.append(Spacer(1, 12))
 
-        # Curvas ROC y PR
-        flowables.append(Paragraph("Figura 11: Curvas ROC y Precision-Recall", styles['Heading3']))
+        # ROC and PR curves
+        flowables.append(Paragraph("Figure 11: ROC and Precision-Recall Curves", styles['Heading3']))
         flowables.append(Image(os.path.join(RESULTS_DIR, 'roc_pr_curves.png'), width=500, height=300))
         flowables.append(Spacer(1, 12))
 
-        # Importancia de características
-        flowables.append(Paragraph("4. Importancia de Características", styles['Heading2']))
+        # Feature importance
+        flowables.append(Paragraph("4. Feature Importance", styles['Heading2']))
         flowables.append(Spacer(1, 12))
         for idx, model_name in enumerate(best_models.keys(), start=1):
             fi_path = os.path.join(RESULTS_DIR, f'{model_name}_feature_importance.png')
             if os.path.exists(fi_path):
                 figure_number = 12 + idx
-                flowables.append(Paragraph(f"Figura {figure_number}: Importancia de Características - {model_name}", styles['Heading3']))
+                flowables.append(Paragraph(f"Figure {figure_number}: Feature Importance - {model_name}", styles['Heading3']))
                 flowables.append(Image(fi_path, width=400, height=300))
                 flowables.append(Spacer(1, 12))
 
-        # Conclusiones
-        flowables.append(Paragraph("5. Conclusiones", styles['Heading2']))
+        # Conclusions
+        flowables.append(Paragraph("5. Conclusions", styles['Heading2']))
         conclusions = (
-            "Los modelos de clasificación evaluados demostraron un desempeño prometedor en la predicción de fallos de equipos. "
-            "Entre los modelos evaluados, Random Forest y Gradient Boosting presentaron las mejores métricas de rendimiento, "
-            "indicando una alta capacidad para distinguir entre equipos que fallarán y los que no. "
-            "La detección de anomalías mediante cinco diferentes algoritmos permitió identificar comportamientos inusuales en la evolución temporal de los equipos. "
-            "Las variables como la vibración, la calidad del aceite, las horas operadas, y el historial de mantenimiento fueron las más determinantes para predecir fallos. "
-            "Estos hallazgos sugieren que un monitoreo continuo y un mantenimiento preventivo basado en estas métricas pueden mejorar significativamente la fiabilidad de los equipos."
+            "The evaluated classification models demonstrated promising performance in predicting equipment failures. "
+            "Among the evaluated models, Random Forest and Gradient Boosting showed the best performance metrics, "
+            "indicating a high capacity to distinguish between equipment that will fail and those that will not. "
+            "Anomaly detection using five different algorithms allowed identifying unusual behaviors in the temporal evolution of equipment. "
+            "Variables such as vibration, oil quality, hours operated, and maintenance history were the most determining factors for predicting failures. "
+            "These findings suggest that continuous monitoring and preventive maintenance based on these metrics can significantly improve equipment reliability."
         )
         flowables.append(Paragraph(conclusions, styles['Normal']))
 
-        # Generar el PDF
+        # Generate PDF
         doc.build(flowables)
-        logging.info(f"Informe PDF generado en '{pdf_file}'.")
+        logging.info(f"PDF report generated in '{pdf_file}'.")
     except Exception as e:
-        logging.error(f"Error al crear el informe PDF: {e}")
+        logging.error(f"Error creating PDF report: {e}")
 
 def main():
     """Main function for overall flow"""
     setup_directories()
     data = generate_simulated_temporal_data()
     exportToCSV(data)
-    data = handle_data_types(data)  # Manejar tipos de datos antes del EDA
+    data = handle_data_types(data)  # Handle data types before EDA
 
-    # Verificación adicional
+    # Additional verification
     categorical_cols_remaining = data.select_dtypes(include=['object', 'category']).columns.tolist()
     if categorical_cols_remaining:
-        raise ValueError(f"Las siguientes columnas aún son categóricas y no han sido codificadas: {categorical_cols_remaining}")
+        raise ValueError(f"The following columns are still categorical and have not been encoded: {categorical_cols_remaining}")
     else:
-        logging.info("Todas las columnas categóricas han sido codificadas correctamente.")
+        logging.info("All categorical columns have been encoded correctly.")
 
     perform_eda(data)
     x_train, x_test, y_train, y_test, feature_names = preprocess_data(data)
@@ -770,7 +770,7 @@ def main():
     plot_feature_importance(best_models, feature_names)
     anomaly_results = detect_anomalies(data)
     create_pdf_report(data, model_metrics, feature_names, best_models, anomaly_results)
-    logging.info("Proceso completado exitosamente. Todos los resultados y el informe se han guardado en la carpeta 'resultados'.")
+    logging.info("Process completed successfully. All results and report have been saved in the 'outputs' folder.")
 
 if __name__ == "__main__":
     main()

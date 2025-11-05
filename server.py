@@ -5,7 +5,7 @@ import time
 from dotenv import load_dotenv
 from paho.mqtt import client as mqtt_client
 
-# Cargar variables de entorno desde .env
+# Load environment variables from .env
 load_dotenv()
 
 PY_CLIENT_ID = f'iot_srv_python_{random.randint(0, 1_000_000)}'
@@ -70,7 +70,7 @@ def connect_mqtt():
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
 
-    # Configurar autenticación si se proporcionan credenciales
+    # Configure authentication if credentials are provided
     if username and password:
         client.username_pw_set(username, password)
 
