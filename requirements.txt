@@ -6,3 +6,4 @@ openpyxl
 paho-mqtt
 kedro
 joblib
+python-dotenv

@@ -1,23 +1,29 @@
 import json
+import os
 import random
+import time
+from dotenv import load_dotenv
 from paho.mqtt import client as mqtt_client
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 PY_CLIENT_ID = f'iot_srv_python_{random.randint(0, 1_000_000)}'
 
 def connect_mqtt():
     client_id = PY_CLIENT_ID
-    broker = 'broker.emqx.io'
-    port = 1883
-    topic = 'flutter/sensors/2'
+    broker = os.getenv('MQTT_BROKER', 'broker.emqx.io')
+    port = int(os.getenv('MQTT_PORT', '1883'))
+    topic = os.getenv('MQTT_TOPIC', 'flutter/sensors/2')
 
-    username = 'alvaro'
-    password = 'public'
+    username = os.getenv('MQTT_USERNAME', '')
+    password = os.getenv('MQTT_PASSWORD', '')
 
     # For reconnect
-    FIRST_RECONNECT_DELAY = 1
-    RECONNECT_RATE = 2
-    MAX_RECONNECT_COUNT = 12
-    MAX_RECONNECT_DELAY = 60
+    FIRST_RECONNECT_DELAY = int(os.getenv('MQTT_FIRST_RECONNECT_DELAY', '1'))
+    RECONNECT_RATE = int(os.getenv('MQTT_RECONNECT_RATE', '2'))
+    MAX_RECONNECT_COUNT = int(os.getenv('MQTT_MAX_RECONNECT_COUNT', '12'))
+    MAX_RECONNECT_DELAY = int(os.getenv('MQTT_MAX_RECONNECT_DELAY', '60'))
 
     def on_connect(client, userdata, flags, rc, properties=None):
         if rc == 0:
@@ -63,6 +69,10 @@ def connect_mqtt():
     # client.tls_set(ca_certs='./broker.emqx.io-ca.crt')
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
+
+    # Configurar autenticación si se proporcionan credenciales
+    if username and password:
+        client.username_pw_set(username, password)
 
     client.connect(broker, port)
     client.subscribe(topic)
