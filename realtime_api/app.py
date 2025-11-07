@@ -8,6 +8,8 @@ from typing import Any, Dict
 from fastapi import Depends, FastAPI, status
 from pydantic import BaseModel, Field, field_validator
 
+from .data_model import SensorDataModel
+
 
 class SensorPayload(BaseModel):
     device_id: str = Field(..., description="Identificador único del dispositivo o sensor.")
@@ -29,20 +31,7 @@ class SensorPayload(BaseModel):
         raise TypeError("El valor debe ser un número (int o float).")
 
     class Config:
-        json_schema_extra = {
-            "examples": [
-                {
-                    "device_id": "PLC-MOTOR-001",
-                    "timestamp": "2025-11-07T12:34:56.789Z",
-                    "temp_01": 65.2,
-                    "temp_02": 63.9,
-                    "temp_03": 66.1,
-                    "curr_01": 12.4,
-                    "curr_02": 12.1,
-                    "curr_03": 11.8,
-                }
-            ]
-        }
+        json_schema_extra = {"examples": [SensorDataModel.example()]}
 
 
 class Settings:
