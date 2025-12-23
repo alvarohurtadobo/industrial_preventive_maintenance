@@ -116,11 +116,18 @@ def get_confidence_level(probability: float) -> str:
         "La predicción es binaria (0=no fallo, 1=fallo) con su probabilidad asociada."
     ),
 )
+def get_preprocessing_service() -> "PreprocessingService":
+    """Dependencia para obtener instancia del servicio de preprocesamiento."""
+    from production.services.preprocessing import PreprocessingService
+    return PreprocessingService()
+
+
 def predict_failure(
     payload: SensorPayload,
     model_name: Optional[str] = None,
     model_service: ModelService = Depends(get_model_service),
     feature_service: FeatureEngineeringService = Depends(get_feature_engineering_service),
+    preprocessing_service: "PreprocessingService" = Depends(get_preprocessing_service),
 ) -> PredictionResponse:
     """
     Endpoint para predecir fallos de equipos industriales.
@@ -148,8 +155,11 @@ def predict_failure(
         sensor_dict = payload.dict()
         features = feature_service.transform_sensor_data(sensor_dict)
 
+        # Aplicar preprocesamiento (scaling)
+        features_scaled = preprocessing_service.scale_features(features)
+
         # Realizar predicción
-        prediction, probability = model_service.predict(model_name, features)
+        prediction, probability = model_service.predict(model_name, features_scaled)
 
         # Determinar nivel de confianza
         confidence = get_confidence_level(probability)
