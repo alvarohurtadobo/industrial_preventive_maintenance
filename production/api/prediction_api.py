@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from realtime_api.app import SensorPayload
 from production.services.model_service import ModelService
 from production.services.feature_engineering import FeatureEngineeringService
+from production.services.preprocessing import PreprocessingService
 
 logger = logging.getLogger(__name__)
 
