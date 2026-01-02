@@ -664,3 +664,4 @@ prometheus-client>=0.16.0  # Métricas
 *Plan creado: 2025*
 *Última actualización: 2025*
 
+
