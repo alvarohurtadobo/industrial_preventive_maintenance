@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from typing import Optional, Tuple
+from datetime import datetime
 from packaging import version
 import sklearn
 
@@ -27,10 +28,15 @@ from sklearn.metrics import (
     confusion_matrix,
     classification_report
 )
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
 # Configuration
 INPUTS_DIR = "inputs"
 MODELS_DIR = "models"
+OUTPUTS_DIR = "outputs"
 DEFAULT_INPUT_FILE = "emulated_data.csv"
 
 # Logging configuration
@@ -356,6 +362,242 @@ def show_sample_predictions(
         print()
         if true_label is not None:
             print(f"      {true_label_str}")
+    
+    return sample_indices[:n_samples]
+
+
+def ensure_output_directory() -> Path:
+    """Ensure the outputs directory exists, create if it doesn't."""
+    output_path = Path(OUTPUTS_DIR)
+    if not output_path.exists():
+        output_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Created output directory: {output_path}")
+    else:
+        logger.info(f"Output directory exists: {output_path}")
+    return output_path
+
+
+def generate_pdf_report(
+    model_name: str,
+    input_file: str,
+    y_true: Optional[np.ndarray],
+    y_pred: np.ndarray,
+    y_pred_proba: Optional[np.ndarray],
+    data: pd.DataFrame,
+    sample_indices: list,
+    metrics: dict
+) -> str:
+    """
+    Generate a PDF report with prediction results.
+    
+    Returns:
+        Path to the generated PDF file
+    """
+    # Ensure output directory exists
+    output_dir = ensure_output_directory()
+    
+    # Generate PDF filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pdf_filename = f"model_test_{model_name}_{timestamp}.pdf"
+    pdf_path = output_dir / pdf_filename
+    
+    logger.info(f"Generating PDF report: {pdf_path}")
+    
+    try:
+        # Create PDF document
+        doc = SimpleDocTemplate(
+            str(pdf_path),
+            pagesize=A4,
+            rightMargin=30,
+            leftMargin=30,
+            topMargin=30,
+            bottomMargin=18
+        )
+        
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(
+            name='CenterTitle',
+            alignment=1,  # Center alignment
+            fontSize=16,
+            spaceAfter=20,
+            fontName='Helvetica-Bold'
+        ))
+        
+        flowables = []
+        
+        # Title
+        flowables.append(Paragraph(
+            "Model Test Report - Predictive Maintenance",
+            styles['CenterTitle']
+        ))
+        flowables.append(Spacer(1, 12))
+        
+        # Information section
+        flowables.append(Paragraph("Test Information", styles['Heading2']))
+        flowables.append(Spacer(1, 6))
+        
+        info_data = [
+            ['Model:', model_name],
+            ['Input File:', input_file],
+            ['Test Date:', datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+            ['Total Samples:', str(len(y_pred))],
+        ]
+        
+        info_table = Table(info_data, colWidths=[150, 300])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        flowables.append(info_table)
+        flowables.append(Spacer(1, 12))
+        
+        # Metrics section
+        if y_true is not None:
+            flowables.append(Paragraph("Classification Metrics", styles['Heading2']))
+            flowables.append(Spacer(1, 6))
+            
+            metrics_data = [
+                ['Metric', 'Value'],
+                ['Accuracy', f"{metrics['accuracy']:.4f}"],
+                ['Precision', f"{metrics['precision']:.4f}"],
+                ['Recall', f"{metrics['recall']:.4f}"],
+                ['F1-Score', f"{metrics['f1']:.4f}"],
+            ]
+            
+            if y_pred_proba is not None and 'roc_auc' in metrics:
+                metrics_data.append(['ROC AUC', f"{metrics['roc_auc']:.4f}"])
+            
+            metrics_table = Table(metrics_data, colWidths=[150, 100])
+            metrics_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            flowables.append(metrics_table)
+            flowables.append(Spacer(1, 12))
+            
+            # Confusion Matrix
+            flowables.append(Paragraph("Confusion Matrix", styles['Heading2']))
+            flowables.append(Spacer(1, 6))
+            
+            cm = confusion_matrix(y_true, y_pred)
+            cm_data = [
+                ['', 'Predicted: No Failure', 'Predicted: Failure'],
+                ['Actual: No Failure', str(cm[0][0]), str(cm[0][1])],
+                ['Actual: Failure', str(cm[1][0]), str(cm[1][1])]
+            ]
+            
+            cm_table = Table(cm_data, colWidths=[120, 120, 120])
+            cm_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            flowables.append(cm_table)
+            flowables.append(Spacer(1, 12))
+        
+        # Prediction Distribution
+        flowables.append(Paragraph("Prediction Distribution", styles['Heading2']))
+        flowables.append(Spacer(1, 6))
+        
+        unique, counts = np.unique(y_pred, return_counts=True)
+        dist_data = [['Prediction', 'Count', 'Percentage']]
+        for label, count in zip(unique, counts):
+            label_name = "Failure" if label == 1 else "No Failure"
+            percentage = (count / len(y_pred)) * 100
+            dist_data.append([label_name, str(count), f"{percentage:.2f}%"])
+        
+        dist_table = Table(dist_data, colWidths=[150, 100, 100])
+        dist_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        flowables.append(dist_table)
+        flowables.append(Spacer(1, 12))
+        
+        # Sample Predictions
+        flowables.append(Paragraph("Sample Predictions", styles['Heading2']))
+        flowables.append(Spacer(1, 6))
+        
+        sample_data = [['Index', 'Equipment ID', 'Time Step', 'Prediction', 'Probability', 'True Label', 'Match']]
+        
+        for idx in sample_indices:
+            row = data.iloc[idx]
+            pred = y_pred[idx]
+            proba = y_pred_proba[idx] if y_pred_proba is not None else "N/A"
+            true_label = y_true[idx] if y_true is not None else None
+            
+            equipment_id = str(row.get('equipment_id', 'N/A'))
+            time_step = str(row.get('time_step', 'N/A'))
+            pred_label = "Failure" if pred == 1 else "No Failure"
+            true_label_str = "Failure" if true_label == 1 else "No Failure" if true_label == 0 else "N/A"
+            match = "✓" if (true_label is None or pred == true_label) else "✗"
+            
+            proba_str = f"{proba:.4f}" if isinstance(proba, (int, float)) else str(proba)
+            
+            sample_data.append([
+                str(idx),
+                equipment_id,
+                time_step,
+                pred_label,
+                proba_str,
+                true_label_str,
+                match
+            ])
+        
+        sample_table = Table(sample_data, colWidths=[50, 80, 70, 80, 80, 80, 50])
+        sample_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
+        ]))
+        flowables.append(sample_table)
+        flowables.append(Spacer(1, 12))
+        
+        # Footer
+        flowables.append(Spacer(1, 12))
+        flowables.append(Paragraph(
+            f"<i>Report generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</i>",
+            styles['Normal']
+        ))
+        
+        # Build PDF
+        doc.build(flowables)
+        logger.info(f"PDF report generated successfully: {pdf_path}")
+        
+        return str(pdf_path)
+        
+    except Exception as e:
+        logger.error(f"Error generating PDF report: {e}")
+        raise
 
 
 def main():
@@ -394,11 +636,40 @@ def main():
         y_pred, y_pred_proba = make_predictions(model, X)
         
         # Step 8: Evaluate results
+        metrics = {}
         if y_true is not None:
             evaluate_predictions(y_true, y_pred, y_pred_proba)
+            
+            # Store metrics for PDF
+            metrics = {
+                'accuracy': accuracy_score(y_true, y_pred),
+                'precision': precision_score(y_true, y_pred, zero_division=0),
+                'recall': recall_score(y_true, y_pred, zero_division=0),
+                'f1': f1_score(y_true, y_pred, zero_division=0),
+            }
+            if y_pred_proba is not None:
+                metrics['roc_auc'] = roc_auc_score(y_true, y_pred_proba)
         
         # Step 9: Show sample predictions
-        show_sample_predictions(data, y_pred, y_pred_proba, y_true, n_samples=10)
+        sample_indices = show_sample_predictions(data, y_pred, y_pred_proba, y_true, n_samples=10)
+        
+        # Step 10: Generate PDF report
+        print(f"\n📄 Generating PDF report...")
+        try:
+            pdf_path = generate_pdf_report(
+                model_name=model_name,
+                input_file=input_file,
+                y_true=y_true,
+                y_pred=y_pred,
+                y_pred_proba=y_pred_proba,
+                data=data,
+                sample_indices=sample_indices,
+                metrics=metrics
+            )
+            print(f"✅ PDF report generated: {pdf_path}")
+        except Exception as e:
+            logger.error(f"Failed to generate PDF report: {e}")
+            print(f"⚠️  Warning: Could not generate PDF report: {e}")
         
         print("\n✅ Testing completed successfully!")
         print("=" * 70)
