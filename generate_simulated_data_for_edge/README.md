@@ -159,3 +159,4 @@ The generated CSV files can be directly used with:
 - NaN values are filled with column means in the complete dataset
 - Each equipment has a single process type assigned randomly
 
+
