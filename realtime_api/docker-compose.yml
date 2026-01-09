@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  realtime-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: realtime-api
+    ports:
+      - "${FASTAPI_PORT:-8000}:8000"
+    environment:
+      - FASTAPI_HOST=0.0.0.0
+      - FASTAPI_PORT=8000
+      - FASTAPI_RELOAD=false
+      - FASTAPI_LOG_LEVEL=${FASTAPI_LOG_LEVEL:-INFO}
+      - FASTAPI_SENSOR_LOG_PATH=/app/outputs/fastapi_sensor_stream.jsonl
+      - FASTAPI_APP_TITLE=${FASTAPI_APP_TITLE:-Industrial Preventive Maintenance API}
+      - FASTAPI_APP_VERSION=${FASTAPI_APP_VERSION:-0.1.0}
+    volumes:
+      # Montar el directorio de outputs para persistir los logs
+      - ./outputs:/app/outputs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
