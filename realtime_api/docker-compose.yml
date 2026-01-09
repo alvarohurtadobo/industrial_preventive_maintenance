@@ -3,8 +3,8 @@ version: '3.8'
 services:
   realtime-api:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: realtime_api/Dockerfile
     container_name: realtime-api
     ports:
       - "${FASTAPI_PORT:-8000}:8000"
@@ -18,10 +18,10 @@ services:
       - FASTAPI_APP_VERSION=${FASTAPI_APP_VERSION:-0.1.0}
     volumes:
       # Montar el directorio de outputs para persistir los logs
-      - ./outputs:/app/outputs
+      - ../outputs:/app/outputs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/openapi.json"]
       interval: 30s
       timeout: 10s
       retries: 3

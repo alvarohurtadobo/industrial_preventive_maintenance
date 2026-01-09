@@ -11,6 +11,8 @@ Este directorio contiene la configuración Docker para ejecutar la API de tiempo
 
 ### Opción 1: Usando Docker Compose (Recomendado)
 
+Desde el directorio `realtime_api`:
+
 ```bash
 # Construir y ejecutar el contenedor
 docker-compose up --build
@@ -27,9 +29,11 @@ docker-compose down
 
 ### Opción 2: Usando Docker directamente
 
+Desde el directorio raíz del proyecto:
+
 ```bash
 # Construir la imagen
-docker build -t realtime-api .
+docker build -t realtime-api -f realtime_api/Dockerfile .
 
 # Ejecutar el contenedor
 docker run -d \
