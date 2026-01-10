@@ -32,13 +32,19 @@ def test_settings(temp_log_file: Path) -> Settings:
 def app(temp_log_file: Path):
     """Crea una instancia de la aplicación FastAPI para testing."""
     import os
+    
+    # Guardar valores originales
     original_log_path = os.environ.get("FASTAPI_SENSOR_LOG_PATH")
+    
+    # Configurar variable de entorno para el test
     os.environ["FASTAPI_SENSOR_LOG_PATH"] = str(temp_log_file)
     
     try:
+        # Crear la app (Settings leerá la variable de entorno actual)
         app_instance = create_app()
         yield app_instance
     finally:
+        # Restaurar valores originales
         if original_log_path:
             os.environ["FASTAPI_SENSOR_LOG_PATH"] = original_log_path
         elif "FASTAPI_SENSOR_LOG_PATH" in os.environ:
