@@ -53,7 +53,10 @@ class TestSensorDataModel:
 
     def test_immutability(self):
         """Test que el modelo es inmutable (frozen dataclass)."""
+        from dataclasses import FrozenInstanceError
+        
         model = SensorDataModel()
         
-        with pytest.raises(Exception):  # frozen=True hace que sea inmutable
+        # frozen=True hace que sea inmutable y lanza FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
             model.device_id = "NEW-DEVICE"

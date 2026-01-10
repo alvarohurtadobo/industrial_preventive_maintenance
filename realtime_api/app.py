@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
@@ -28,7 +28,8 @@ class SensorPayload(BaseModel):
     def validate_numeric(cls, value: Any) -> float:
         if isinstance(value, (float, int)):
             return float(value)
-        raise TypeError("El valor debe ser un número (int o float).")
+        from pydantic import ValidationError
+        raise ValueError("El valor debe ser un número (int o float).")
 
     class Config:
         json_schema_extra = {"examples": [SensorDataModel.example()]}
@@ -70,11 +71,11 @@ def persist_payload(settings: Settings, payload: Dict[str, Any], logger: logging
     settings.log_path.parent.mkdir(parents=True, exist_ok=True)
     enriched_payload = {
         **payload,
-        "received_at": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+        "received_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds") + "Z",
     }
 
     with settings.log_path.open("a", encoding="utf-8") as stream:
-        stream.write(json.dumps(enriched_payload))
+        stream.write(json.dumps(enriched_payload, default=str))
         stream.write("\n")
 
     logger.debug("Datos de sensor persistidos en %s", settings.log_path)
@@ -102,7 +103,8 @@ def create_app() -> FastAPI:
     def ingest_sensor_data(
         payload: SensorPayload, current_settings: Settings = Depends(get_settings)
     ) -> Dict[str, str]:
-        data = payload.dict()
+        # Usar model_dump con mode='json' para serializar correctamente datetime
+        data = payload.model_dump(mode='json')
         logger.info("Lectura recibida de %s a las %s", data["device_id"], data["timestamp"])
         persist_payload(current_settings, data, logger)
         return {"message": "Lectura aceptada"}

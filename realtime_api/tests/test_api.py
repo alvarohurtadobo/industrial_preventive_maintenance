@@ -97,7 +97,8 @@ class TestSensorIngestionEndpoint:
         
         response = client.post("/api/v1/sensors", json=payload)
         
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        # Pydantic v2 usa HTTP_422_UNPROCESSABLE_CONTENT en algunos casos
+        assert response.status_code in (status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_422_UNPROCESSABLE_CONTENT)
 
     def test_negative_values_accepted(self, client, sample_sensor_payload):
         """Test que valores negativos son aceptados (pueden ser válidos en algunos casos)."""
